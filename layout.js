@@ -96,7 +96,7 @@
     <footer class="site-footer">
       ${SF.isoSVG}
       <p class="serif">${esc(b.motto)}</p>
-      <p>© ${new Date().getFullYear()} ${esc(b.name)} · <a href="mailto:${esc(b.email)}">${esc(b.email)}</a></p>
+      <p>© ${new Date().getFullYear()} ${esc(b.name)} · <a href="mailto:${esc(b.email)}">${esc(b.email)}</a> · <a href="privacidad.html">Política de privacidad</a></p>
     </footer>`;
   }
 
@@ -135,7 +135,7 @@
         </section>
         <section><h3>Privacidad</h3>
           <button class="set-row set-row--link set-row--danger" data-wipe><b>Borrar mis datos de este dispositivo</b>${icon.close}</button>
-          <button class="set-row set-row--link" data-soon="Términos y privacidad"><b>Términos y política de privacidad</b>${icon.arrow}</button>
+          <a class="set-row set-row--link" href="privacidad.html"><b>Política de privacidad</b>${icon.arrow}</a>
         </section>
         <p class="settings__foot">${SF.isoSVG}<span>SF Urban · v0.3</span></p>
       </div>`;
