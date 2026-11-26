@@ -1,289 +1,295 @@
 /* =========================================================
-   Inicio estilo Instagram
-   - Intro en video (intro.js) → el logo vuela al header.
-   - Perfil de la marca + historias destacadas (visor de historias).
-   - Apartados en pestañas: Tienda · Drop 01 · Guardados · Nosotros.
-   - Cada prenda abre una "publicación" con tallas y botón de compra.
+   Aplicación principal (index.html)
+   Intro → logo al header → vistas controladas por la barra flotante:
+   #inicio · #explorar · #favoritos · #carrito · #pagos · #perfil
    ========================================================= */
 (function () {
   const { $, $$, esc, icon } = SF;
-  SF.mountStylePanel();
   SF.mountLayout();
 
-  const app = $('[data-app]');
+  const app = $('[data-app]'), view = $('[data-view]');
   const main = SF.getProduct('p-0001');
-  const active = SF.catalog.filter(p => p.status === 'active');
-  const soon = SF.catalog.filter(p => p.status === 'coming_soon');
+  const active = () => SF.catalog.filter(p => p.status === 'active');
+  const soon = () => SF.catalog.filter(p => p.status !== 'active');
+  const catLabel = (id) => SF.categories.find(c => c.id === id)?.label || '';
 
-  /* ---------------- Intro ---------------- */
   SF.runIntro({ onDone: () => requestAnimationFrame(() => app.classList.add('is-in')) });
 
-  /* ---------------- Perfil ---------------- */
-  $('[data-iso]').innerHTML = SF.isoSVG;
-  $('[data-handle]').textContent = SF.config.brand.handle;
-  $('[data-free]').textContent = SF.money(SF.config.shipping.freeFrom);
-  $('[data-stats]').innerHTML = `<li><b>${active.length}</b> ${active.length === 1 ? 'prenda' : 'prendas'}</li><li><b>${new Set(SF.catalog.map(p => p.drop)).size}</b> drops</li><li><b>${soon.length}</b> próximamente</li>`;
-
-  const followBtn = $('[data-follow]');
-  const syncFollow = () => {
-    const u = SF.auth.user();
-    followBtn.textContent = u ? 'Siguiendo' : 'Seguir';
-    followBtn.classList.toggle('btn--accent', !u); followBtn.classList.toggle('btn--ghost', !!u);
-  };
-  const follow = (e) => { e && e.preventDefault(); SF.auth.user() ? (location.href = 'cuenta.html') : SF.openAuth('register'); };
-  followBtn.addEventListener('click', follow);
-  $('[data-follow-link]').addEventListener('click', follow);
-  SF.auth.onChange(syncFollow); syncFollow();
-  $('[data-message]').addEventListener('click', () => { const p = $('[data-chat-panel]'); p.hidden = !p.hidden; SF.track('chat_open'); });
-  $('[data-share]').addEventListener('click', async () => {
-    const data = { title: 'SF Urban', text: 'Mira SF Urban — Drop 01', url: location.origin + location.pathname };
-    try { if (navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(data.url); SF.toast('Enlace copiado ✓'); } } catch {}
-  });
-
-  /* ---------------- Historias destacadas ---------------- */
-  const img = main.images[0];
-  const stories = [
-    { id: 'drop', label: 'Drop 01', isNew: true, cover: `<img src="${img}" alt="">`, slides: [
-      { img, title: 'Drop 01', text: 'Conjunto Track Burdeos. Paneles curvos y vivos contrastantes.', cta: 'Ver prenda', post: main.id },
-      { center: true, title: 'Edición <span class="serif">limitada</span>', text: 'Tallas S a XL · pocas unidades por talla.', cta: 'Comprar', post: main.id },
-    ] },
-    { id: 'nuevo', label: 'Nuevo', isNew: true, cover: SF.isoSVG, slides: [
-      { center: true, title: 'Llegamos', text: 'SF Urban: activewear para mujer y hombre, hecho para moverse por la ciudad.' },
-      { center: true, title: '<span class="serif">Dos letras,</span> un solo movimiento', text: 'Así nace nuestro logo: la S y la F comparten un mismo trazo.' },
-    ] },
-    { id: 'proximo', label: 'Próximo', cover: `<img src="${img}" alt="" style="filter:brightness(0) invert(.2)">`, slides: [
-      { img, mystery: true, title: 'Muy pronto', text: 'Nuevas piezas en camino. Únete al club y entérate primero.', cta: 'Avísame', action: 'follow' },
-    ] },
-    { id: 'tallas', label: 'Tallas', cover: '<span class="big">S·XL</span>', slides: [
-      { center: true, title: 'Guía de tallas', text: 'Fit oversized. Si buscas un look más ajustado, pide una talla menos. Tabla de medidas detallada muy pronto.' },
-    ] },
-    { id: 'envios', label: 'Envíos', cover: icon.bag, slides: [
-      { center: true, title: 'Envíos', text: `Envío nacional en 1–3 días hábiles. Gratis desde ${SF.money(SF.config.shipping.freeFrom)}.` },
-      { center: true, title: 'Cambios', text: '30 días para cambios con etiquetas.' },
-    ] },
-    { id: 'club', label: 'Club', cover: icon.user, slides: [
-      { center: true, title: 'SF <span class="serif">Club</span>', text: 'Acceso anticipado a cada drop, favoritos guardados y seguimiento de pedidos.', cta: 'Unirme', action: 'follow' },
-    ] },
-  ];
-  const seenStories = new Set(SF.db.kv.get('storiesSeen', []));
-  const hlBox = $('[data-highlights]');
-  const renderHL = () => {
-    hlBox.innerHTML = stories.map(s => `<button class="hl ${s.isNew && !seenStories.has(s.id) ? 'is-new' : ''}" data-story="${s.id}"><span class="hl__ring"><span class="hl__in">${s.cover}</span></span>${esc(s.label)}</button>`).join('');
-    $('.avatar').classList.toggle('is-seen', seenStories.has('drop'));
-  };
-  renderHL();
-
-  const viewer = $('[data-story-viewer]');
-  let st = null; // { story, i, t0, raf, paused }
-  const DUR = 5000;
-  function openStory(id) {
-    const story = stories.find(s => s.id === id); if (!story) return;
-    st = { story, i: 0 }; viewer.classList.add('is-open'); viewer.setAttribute('aria-hidden', 'false');
-    document.documentElement.classList.add('no-scroll');
-    seenStories.add(id); SF.db.kv.set('storiesSeen', [...seenStories]); renderHL();
-    SF.track('story_view', { story: id });
-    showSlide();
-  }
-  function closeStory() {
-    if (!st) return; cancelAnimationFrame(st.raf); st = null;
-    viewer.classList.remove('is-open'); viewer.setAttribute('aria-hidden', 'true');
-    document.documentElement.classList.remove('no-scroll');
-  }
-  function showSlide() {
-    const { story, i } = st; const s = story.slides[i];
-    viewer.innerHTML = `
-      <div class="story__frame">
-        <div class="story__bars">${story.slides.map((_, k) => `<i><b style="width:${k < i ? 100 : 0}%"></b></i>`).join('')}</div>
-        <div class="story__head"><span class="pm-av">${SF.isoSVG}</span>${esc(SF.config.brand.handle)} <span class="muted">· ${esc(story.label)}</span><button class="icon-btn" data-story-close aria-label="Cerrar">${icon.close}</button></div>
-        <div class="story__slide ${s.center ? 'is-center' : ''}">
-          ${s.img ? `<img src="${s.img}" alt="" style="${s.mystery ? 'filter:brightness(0) invert(.12)' : ''}">` : ''}
-          <div class="txt"><h3>${s.title}</h3><p>${esc(s.text)}</p>${s.cta ? `<button class="btn btn--accent" data-story-cta>${esc(s.cta)} ${icon.arrow}</button>` : ''}</div>
-        </div>
-        <button class="story__nav story__nav--prev" data-story-prev aria-label="Anterior"></button>
-        <button class="story__nav story__nav--next" data-story-next aria-label="Siguiente"></button>
-      </div>`;
-    const bar = $$('.story__bars b', viewer)[i];
-    const t0 = performance.now();
-    const tick = (now) => {
-      if (!st) return;
-      const p = Math.min(1, (now - t0) / DUR); bar.style.width = p * 100 + '%';
-      if (p >= 1) return step(1);
-      st.raf = requestAnimationFrame(tick);
-    };
-    st.raf = requestAnimationFrame(tick);
-    const cta = $('[data-story-cta]', viewer);
-    if (cta) cta.onclick = () => { const post = s.post, act = s.action; closeStory(); if (post) openPost(post); if (act === 'follow') follow(); };
-  }
-  function step(d) {
-    if (!st) return; cancelAnimationFrame(st.raf);
-    const n = st.i + d;
-    if (n < 0) { st.i = 0; showSlide(); return; }
-    if (n >= st.story.slides.length) { closeStory(); return; }
-    st.i = n; showSlide();
-  }
-  document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-story]'); if (t) { openStory(t.dataset.story); return; }
-    if (e.target.closest('[data-story-close]') || e.target === viewer) closeStory();
-    else if (e.target.closest('[data-story-next]')) step(1);
-    else if (e.target.closest('[data-story-prev]')) step(-1);
-  });
-  addEventListener('keydown', (e) => {
-    if (st) { if (e.key === 'Escape') closeStory(); if (e.key === 'ArrowRight') step(1); if (e.key === 'ArrowLeft') step(-1); }
-    else if (e.key === 'Escape') closePost();
-  });
-
-  /* ---------------- Publicación (ficha rápida) ---------------- */
-  const pm = $('[data-post-modal]');
-  function openPost(id) {
-    const p = SF.getProduct(id); if (!p || p.status !== 'active') return;
-    let size = null; const wish = SF.wish.has(p.id);
-    pm.innerHTML = `
-      <div class="post-modal__card">
-        <div class="post-modal__media"><img src="${p.images[0]}" alt="${esc(p.name)}"></div>
-        <div class="post-modal__side">
-          <div class="pm-head"><span class="pm-av">${SF.isoSVG}</span><div><strong>${esc(SF.config.brand.handle)}</strong><small>${esc(p.drop)} · ${esc(p.colors[0].name)}</small></div><button class="icon-btn" data-pm-close aria-label="Cerrar">${icon.close}</button></div>
-          <div class="pm-body">
-            <div class="card__badges">${p.badges.map((b, k) => `<span class="tag ${k ? '' : 'tag--accent'}">${esc(b)}</span>`).join('')}</div>
-            <h2>${esc(p.name)}</h2>
-            <div class="pm-price">${SF.money(p.price)}</div>
-            <p class="muted" style="margin:0">${esc(p.description)}</p>
-            <div><div class="pdp__opt" style="margin:6px 0 8px"><span>Talla <span class="muted" data-pm-size>— elige una</span></span></div>
-            <div class="sizes">${p.sizes.map(s => `<button class="size" data-pm-s="${s}" ${p.stock?.[s] ? '' : 'disabled'}>${s}</button>`).join('')}</div></div>
-          </div>
-          <div class="pm-foot">
-            <div class="pm-icons">
-              <button class="icon-btn ${wish ? 'is-on' : ''}" data-wish="${p.id}" aria-pressed="${wish}" aria-label="Favorito">${icon.heart}</button>
-              <button class="icon-btn" data-pm-share aria-label="Compartir">${icon.share}</button>
-              <a class="icon-btn" href="producto.html?id=${p.id}" aria-label="Ver ficha completa" style="margin-left:auto">${icon.bookmark}</a>
-            </div>
-            <button class="btn btn--accent btn--block" data-pm-add>Añadir a la bolsa</button>
-            <a class="link-btn" href="producto.html?id=${p.id}" style="text-align:center">Ver ficha completa</a>
-          </div>
-        </div>
-      </div>`;
-    pm.classList.add('is-open'); pm.setAttribute('aria-hidden', 'false');
-    document.documentElement.classList.add('no-scroll');
-    SF.track('product_view', { productId: p.id, from: 'post' });
-    $$('[data-pm-s]', pm).forEach(b => b.onclick = () => {
-      size = b.dataset.pmS; $$('[data-pm-s]', pm).forEach(x => x.classList.toggle('is-on', x === b));
-      $('[data-pm-size]', pm).textContent = '— ' + size;
-    });
-    $('[data-pm-add]', pm).onclick = () => {
-      if (!size) { SF.toast('Elige una talla primero', 'err'); return; }
-      try { SF.cart.add(p.id, size); SF.bump(); closePost(); SF.toast(`${p.name} (${size}) en tu bolsa`); setTimeout(() => SF.open('cart'), 250); }
-      catch (ex) { SF.toast(ex.message, 'err'); }
-    };
-    $('[data-pm-share]', pm).onclick = async () => {
-      const url = location.origin + location.pathname.replace(/[^/]*$/, '') + 'producto.html?id=' + p.id;
-      try { if (navigator.share) await navigator.share({ title: p.name, url }); else { await navigator.clipboard.writeText(url); SF.toast('Enlace copiado ✓'); } } catch {}
-    };
-  }
-  function closePost() { if (!pm.classList.contains('is-open')) return; pm.classList.remove('is-open'); pm.setAttribute('aria-hidden', 'true'); document.documentElement.classList.remove('no-scroll'); }
-  pm.addEventListener('click', (e) => { if (e.target === pm || e.target.closest('[data-pm-close]')) closePost(); });
-
-  /* ---------------- Apartados (pestañas) ---------------- */
-  const tabs = [
-    { id: 'tienda', label: 'Tienda', icon: icon.grid },
-    { id: 'drop', label: 'Drop 01', icon: icon.play },
-    { id: 'guardados', label: 'Guardados', icon: icon.bookmark },
-    { id: 'nosotros', label: 'Nosotros', icon: icon.info },
-  ];
-  const tabBox = $('[data-tabs]'), view = $('[data-view]');
-  tabBox.innerHTML = tabs.map(t => `<button class="ig-tab" role="tab" data-tab="${t.id}" aria-label="${t.label}">${t.icon}<span>${t.label}</span></button>`).join('');
-  let cat = 'all', sort = 'new';
-
-  const postTile = (p) => p.status === 'active'
-    ? `<button class="post" data-post="${p.id}" aria-label="${esc(p.name)}, ${SF.money(p.price)}">
+  /* ---------------- Piezas reutilizables ---------------- */
+  const card = (p) => {
+    if (p.status !== 'active') {
+      const n = String(SF.catalog.indexOf(p) + 1).padStart(2, '0');
+      return `<article class="pcard pcard--soon">
+        <div class="pcard__media"><span class="num">${n}</span><span class="lbl">Próximamente</span></div>
+        <div class="pcard__info"><span class="pcard__name">Espacio reservado</span></div>
+        <div class="pcard__sub">${esc(catLabel(p.category))} · ${esc(p.drop)}</div>
+        <button class="btn btn--ghost btn--sm btn--block" data-notify="${p.id}">Avísame</button>
+      </article>`;
+    }
+    const w = SF.wish.has(p.id);
+    return `<article class="pcard">
+      <a class="pcard__media" href="producto.html?id=${p.id}" aria-label="${esc(p.name)}">
         <img src="${p.images[0]}" alt="" loading="lazy">
-        <span class="post__corner">${p.badges[0] ? `<span class="tag tag--accent">${esc(p.badges[0])}</span>` : ''}</span>
-        <span class="post__over"><strong>${esc(p.name)}</strong><span>${SF.money(p.price)}</span></span>
-      </button>`
-    : `<button class="post post--soon" data-notify="${p.id}" aria-label="Próximamente: avísame"><span><span class="num">${String(SF.catalog.indexOf(p) + 1).padStart(2, '0')}</span><span class="lbl">Próximamente</span></span></button>`;
+        ${p.badges[0] ? `<span class="tag tag--accent pcard__tag">${esc(p.badges[0])}</span>` : ''}
+      </a>
+      <button class="icon-btn pcard__wish ${w ? 'is-on' : ''}" data-wish="${p.id}" aria-pressed="${w}" aria-label="Guardar en favoritos">${icon.heart}</button>
+      <div class="pcard__info"><a class="pcard__name" href="producto.html?id=${p.id}">${esc(p.name)}</a><span class="pcard__price">${SF.money(p.price)}</span></div>
+      <div class="pcard__sub"><span class="swatch" style="background:${p.colors[0].hex}"></span>${esc(p.colors[0].name)} · ${p.sizes[0]}–${p.sizes[p.sizes.length - 1]}</div>
+    </article>`;
+  };
+  const head = (title, sub, extra = '') => `<header class="view-head"><div><h1 class="display h-m">${title}</h1>${sub ? `<p class="muted">${sub}</p>` : ''}</div>${extra}</header>`;
+  const empty = (ic, title, text, btn) => `<div class="empty"><div class="empty__icon">${icon[ic]}</div><h3>${title}</h3><p>${text}</p>${btn || ''}</div>`;
 
+  /* ---------------- Estado de Explorar ---------------- */
+  const ex = { q: '', cat: 'all', size: 'all', sort: 'new', soon: true };
+
+  /* ---------------- Vistas ---------------- */
   const views = {
-    tienda() {
-      let list = SF.catalog.filter(p => cat === 'all' || p.category === cat);
-      const a = list.filter(p => p.status === 'active'), s = list.filter(p => p.status !== 'active');
-      if (sort === 'price-asc') a.sort((x, y) => x.price - y.price);
-      if (sort === 'price-desc') a.sort((x, y) => y.price - x.price);
-      list = [...a, ...s];
-      return `
-        <div class="view-bar">
-          <div class="chips">${[{ id: 'all', label: 'Todo' }, ...SF.categories].map(c => `<button class="chip ${c.id === cat ? 'is-on' : ''}" data-cat="${c.id}">${c.label}</button>`).join('')}</div>
-          <select class="select" data-sort aria-label="Ordenar"><option value="new">Recientes</option><option value="price-asc">Menor precio</option><option value="price-desc">Mayor precio</option></select>
-        </div>
-        <div class="ig-grid">${list.length ? list.map(postTile).join('') : '<div class="empty-grid">Nada por aquí todavía.</div>'}</div>`;
-    },
-    drop() {
+    inicio() {
       const f = main.features;
       const col = (arr, start, side) => `<div class="inside__col inside__col--${side}">${arr.map((x, k) => `<div class="callout" data-f="${start + k}" style="--d:${0.2 + (start + k) * 0.1}s"><b><i>0${start + k + 1}</i>${esc(x.title)}</b><span>${esc(x.text)}</span></div>`).join('')}</div>`;
       return `
-        <div class="drop-head"><span class="eyebrow">Drop 01 · ${esc(main.name)}</span><h2 class="display h-m mt-1">Qué hay <span class="serif">dentro</span></h2><p>Pasa por los puntos para conocer cada detalle.</p></div>
+      <section class="hero2">
+        <div class="hero2__txt">
+          <span class="eyebrow">${esc(main.drop)} · Ya disponible</span>
+          <h1 class="display hero2__title">Conjunto<br>Track <span class="serif">burdeos</span></h1>
+          <p class="muted hero2__desc">${esc(main.description)}</p>
+          <div class="hero2__price">${SF.money(main.price)} <small>Tallas ${main.sizes.join(' · ')}</small></div>
+          <div class="hero2__cta"><a class="btn btn--accent" href="producto.html?id=${main.id}">Comprar ahora ${icon.arrow}</a><button class="btn btn--ghost" data-go="explorar">Explorar</button></div>
+        </div>
+        <div class="hero2__fig"><div class="hero2__glow"></div><div class="hero2__ring"></div><img src="${main.images[0]}" alt="${esc(main.name)}"></div>
+      </section>
+
+      <section class="sec" data-reveal>
+        <div class="sec__head"><h2 class="sec__title">Novedades</h2><button class="link-more" data-go="explorar">Ver todo ${icon.arrow}</button></div>
+        <div class="rail">${SF.catalog.slice(0, 6).map(card).join('')}</div>
+      </section>
+
+      <section class="sec" data-reveal>
+        <div class="sec__head"><h2 class="sec__title">Qué hay <span class="serif">dentro</span></h2><span class="muted">Pasa por los puntos</span></div>
         <div class="inside" data-inside>
           ${col(f.slice(0, 3), 0, 'l')}
-          <div class="inside__figure"><div class="inside__ring"></div><img src="${main.images[0]}" alt="${esc(main.name)}">
+          <div class="inside__figure"><div class="inside__ring"></div><img src="${main.images[0]}" alt="" loading="lazy">
             ${f.map((x, i) => `<button class="hotspot" data-f="${i}" style="left:${x.x}%;top:${x.y}%;--d:${0.15 + i * 0.1}s" aria-label="${esc(x.title)}"></button>`).join('')}</div>
           ${col(f.slice(3), 3, 'r')}
         </div>
-        <div class="drop-cta"><button class="btn btn--accent" data-post="${main.id}">Comprar · ${SF.money(main.price)}</button><a class="btn btn--ghost" href="producto.html?id=${main.id}">Ficha completa</a></div>`;
+      </section>
+
+      <section class="sec" data-reveal>
+        <div class="sec__head"><h2 class="sec__title">Categorías</h2></div>
+        <div class="cats">${SF.categories.map(c => { const n = active().filter(p => p.category === c.id).length; return `<button class="cat-row" data-cat-go="${c.id}"><span class="cat-row__name">${esc(c.label)}</span><span class="cat-row__meta">${n ? `${n} ${n === 1 ? 'prenda' : 'prendas'}` : 'Próximamente'}</span>${icon.arrow}</button>`; }).join('')}</div>
+      </section>
+
+      <section class="sec club" data-reveal>
+        <div>${SF.isoSVG}<h2 class="sec__title">SF <span class="serif">Club</span></h2><p class="muted">Acceso anticipado a cada drop, favoritos guardados y seguimiento de tus pedidos.</p></div>
+        <button class="btn btn--accent" data-go="perfil">${SF.auth.user() ? 'Ir a mi perfil' : 'Unirme gratis'} ${icon.arrow}</button>
+      </section>`;
     },
-    guardados() {
-      const list = SF.wish.list().map(SF.getProduct).filter(Boolean);
-      if (!list.length) return `<div class="empty"><div class="empty__icon">${icon.bookmark}</div><h3>Guarda tus favoritas</h3><p>Toca el ♡ en cualquier prenda para verla aquí.</p></div>`;
-      return `<div class="ig-grid">${list.map(postTile).join('')}</div>`;
-    },
-    nosotros() {
-      const b = SF.config.brand;
-      return `<div class="about">
-        <p class="about__quote">Somos dos personas con una idea fija: ropa para <em>moverse</em> por la ciudad, con actitud y sin ruido.</p>
-        <div class="rows">
-          <div class="row"><span>Qué hacemos</span><span>Activewear urbano para mujer y hombre</span></div>
-          <div class="row"><span>Envíos</span><span>Nacional · 1–3 días hábiles · gratis desde ${SF.money(SF.config.shipping.freeFrom)}</span></div>
-          <div class="row"><span>Cambios</span><span>30 días con etiquetas</span></div>
-          <div class="row"><span>Pagos</span><span>En línea muy pronto</span></div>
-          <div class="row"><span>Contacto</span><span><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></span></div>
+
+    explorar() {
+      return `
+        ${head('Explorar', `${active().length} ${active().length === 1 ? 'prenda disponible' : 'prendas disponibles'} · ${soon().length} en camino`)}
+        <label class="searchbox">${icon.search}<input type="search" placeholder="Busca prendas, colores, drops…" value="${esc(ex.q)}" data-ex-q aria-label="Buscar"></label>
+        <div class="filters">
+          <div class="chips scroll-x">${[{ id: 'all', label: 'Todo' }, ...SF.categories].map(c => `<button class="chip ${ex.cat === c.id ? 'is-on' : ''}" data-ex-cat="${c.id}">${c.label}</button>`).join('')}</div>
+          <div class="filters__row">
+            <div class="chips">${['all', 'S', 'M', 'L', 'XL'].map(s => `<button class="chip chip--size ${ex.size === s ? 'is-on' : ''}" data-ex-size="${s}">${s === 'all' ? 'Todas las tallas' : s}</button>`).join('')}</div>
+            <div class="filters__end">
+              <label class="mini-switch"><input type="checkbox" class="switch" data-ex-soon ${ex.soon ? 'checked' : ''}> Próximamente</label>
+              <select class="select" data-ex-sort aria-label="Ordenar"><option value="new">Recientes</option><option value="price-asc">Menor precio</option><option value="price-desc">Mayor precio</option></select>
+            </div>
+          </div>
         </div>
-      </div>`;
+        <div class="grid2" data-ex-results></div>`;
+    },
+
+    favoritos() {
+      const list = SF.wish.list().map(SF.getProduct).filter(Boolean);
+      return `${head('Favoritos', list.length ? `${list.length} ${list.length === 1 ? 'prenda guardada' : 'prendas guardadas'}` : '')}
+        ${list.length ? `<div class="grid2">${list.map(card).join('')}</div>`
+          : empty('heart', 'Aún no guardas nada', 'Toca el ♡ en cualquier prenda y aparecerá aquí.', `<button class="btn btn--ghost" data-go="explorar">Explorar prendas</button>`)}`;
+    },
+
+    carrito() {
+      const lines = SF.cart.detailed(), t = SF.cart.totals();
+      if (!lines.length) return `${head('Carrito')}${empty('cart', 'Tu carrito está vacío', 'Cuando añadas prendas aparecerán aquí.', `<button class="btn btn--accent" data-go="explorar">Explorar prendas</button>`)}`;
+      const pct = Math.min(100, (t.subtotal / t.freeFrom) * 100);
+      return `${head('Carrito', `${SF.cart.count()} ${SF.cart.count() === 1 ? 'artículo' : 'artículos'}`)}
+        <div class="cart-layout">
+          <div class="panel">
+            <div class="free-ship"><p>${t.missingForFree ? `Te faltan <strong>${SF.money(t.missingForFree)}</strong> para envío gratis` : '¡Tienes <strong>envío gratis</strong>!'}</p><div class="bar"><span style="width:${pct}%"></span></div></div>
+            ${lines.map(l => `
+            <div class="cart-line">
+              <a href="producto.html?id=${l.productId}" class="cart-line__img"><img src="${l.product.images[0]}" alt="${esc(l.product.name)}"></a>
+              <div class="cart-line__info">
+                <a href="producto.html?id=${l.productId}" class="cart-line__name">${esc(l.product.name)}</a>
+                <span class="muted">Talla ${esc(l.size)} · ${esc(l.product.colors?.[0]?.name || '')}</span>
+                <div class="qty" data-line="${l.productId}|${l.size}"><button data-q="-1" aria-label="Menos">−</button><span>${l.qty}</span><button data-q="1" aria-label="Más">+</button></div>
+              </div>
+              <div class="cart-line__end"><strong>${SF.money(l.lineTotal)}</strong><button class="link-btn" data-rm="${l.productId}|${l.size}">Quitar</button></div>
+            </div>`).join('')}
+          </div>
+          <aside class="panel summary">
+            <h2>Resumen</h2>
+            <div class="sum-row"><span>Subtotal</span><span>${SF.money(t.subtotal)}</span></div>
+            <div class="sum-row muted"><span>Envío</span><span>${t.shipping ? SF.money(t.shipping) : 'Gratis'}</span></div>
+            <div class="sum-row sum-row--total"><span>Total</span><span>${SF.money(t.total)}</span></div>
+            <a class="btn btn--accent btn--block" href="checkout.html">Continuar al pago ${icon.arrow}</a>
+            <button class="btn btn--ghost btn--block" data-go="explorar">Seguir explorando</button>
+            <button class="pay-strip" data-go="pagos">${icon.card}${icon.bank}${icon.phone}${icon.cash}<span>Ver medios de pago</span></button>
+          </aside>
+        </div>`;
+    },
+
+    pagos() {
+      const pend = SF.orders.mine().filter(o => o.status === 'pending_payment');
+      const methods = [
+        { ic: 'card', t: 'Tarjeta de crédito o débito', d: 'Visa, Mastercard y American Express.' },
+        { ic: 'bank', t: 'Transferencia / PSE', d: 'Débito directo desde tu cuenta bancaria.' },
+        { ic: 'phone', t: 'Billeteras digitales', d: 'Paga desde la app de tu billetera.' },
+        { ic: 'cash', t: 'Pago contra entrega', d: 'Pagas al recibir (según ciudad).' },
+      ];
+      return `${head('Medios de pago', 'Cómo puedes pagar tus pedidos')}
+        <div class="pay-layout">
+          <div class="paycard" aria-hidden="true">
+            <div class="paycard__shine"></div>
+            <div class="paycard__top">${SF.isoSVG}<span class="paycard__chip"></span></div>
+            <div class="paycard__num">•••• •••• •••• 2026</div>
+            <div class="paycard__bottom"><span>SF CLUB</span><span class="brand__word">Urban</span></div>
+          </div>
+          <div class="methods">
+            ${methods.map(m => `<div class="method"><span class="method__ic">${icon[m.ic]}</span><div><b>${m.t}</b><small>${m.d}</small></div><span class="status">Próximamente</span></div>`).join('')}
+          </div>
+        </div>
+        <div class="notice mt-2">Los pagos en línea se activarán muy pronto. Por ahora tu pedido queda <strong>reservado</strong> y te contactamos para completar el pago.</div>
+        ${pend.length ? `<section class="sec sec--tight"><div class="sec__head"><h2 class="sec__title">Pendientes de pago</h2></div>
+          <div class="panel">${pend.map(o => `<div class="order"><div><strong>${esc(o.number)}</strong> <span class="muted">· ${new Date(o.createdAt).toLocaleDateString('es')}</span><br><span class="muted">${o.items.map(i => `${esc(i.name)} (${esc(i.size)}) x${i.qty}`).join(', ')}</span></div><div style="text-align:right"><strong>${SF.money(o.total)}</strong><br><span class="status">Pendiente</span></div></div>`).join('')}</div></section>` : ''}
+        <section class="sec sec--tight">
+          <div class="sec__head"><h2 class="sec__title">Compra <span class="serif">segura</span></h2></div>
+          <div class="trust">
+            <div>${icon.shield}<b>Pasarela certificada</b><small>Los pagos los procesará un proveedor especializado.</small></div>
+            <div>${icon.card}<b>Sin guardar tarjetas</b><small>SF Urban no almacena los datos de tu tarjeta.</small></div>
+            <div>${icon.truck}<b>Envío con seguimiento</b><small>Te avisamos en cada paso de tu pedido.</small></div>
+          </div>
+        </section>`;
+    },
+
+    perfil() {
+      const u = SF.auth.user();
+      if (!u) return `
+        ${head('Perfil')}
+        <div class="welcome panel">
+          <div class="avatar-xl">${SF.isoSVG}</div>
+          <h2 class="display h-s">Únete al <span class="serif">club</span></h2>
+          <p class="muted">Guarda favoritos, sigue tus pedidos y entérate primero de cada drop.</p>
+          <div class="welcome__cta"><button class="btn btn--accent" data-auth="register">Crear cuenta</button><button class="btn btn--ghost" data-auth="login">Iniciar sesión</button></div>
+          <ul class="perks-list"><li>${icon.box} Seguimiento de pedidos</li><li>${icon.heart} Favoritos en todos tus dispositivos*</li><li>${icon.truck} Direcciones guardadas</li></ul>
+          <small class="muted">*Cuando conectemos la base de datos.</small>
+        </div>`;
+      const tab = ex.ptab || 'pedidos';
+      const orders = SF.orders.mine(), a = u.address || {};
+      const initials = u.name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
+      const statusTxt = { pending_payment: 'Pendiente de pago', paid: 'Pagado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado' };
+      const panes = {
+        pedidos: orders.length ? `<div class="panel">${orders.map(o => `<div class="order"><div><strong>${esc(o.number)}</strong> <span class="muted">· ${new Date(o.createdAt).toLocaleDateString('es')}</span><br><span class="muted">${o.items.map(i => `${esc(i.name)} (${esc(i.size)}) x${i.qty}`).join(', ')}</span></div><div style="text-align:right"><strong>${SF.money(o.total)}</strong><br><span class="status">${statusTxt[o.status] || o.status}</span></div></div>`).join('')}</div>`
+          : empty('box', 'Sin pedidos todavía', 'Cuando compres, verás aquí el estado de cada pedido.', `<button class="btn btn--ghost" data-go="explorar">Explorar</button>`),
+        datos: `<div class="panel"><form class="form" data-profile>
+            <label>Nombre<input name="name" value="${esc(u.name)}" required></label>
+            <div class="form-row"><label>Correo<input value="${esc(u.email)}" disabled></label><label>Celular<input name="phone" type="tel" value="${esc(u.phone || '')}"></label></div>
+            <div class="form-row"><label>Cumpleaños<input name="birthdate" type="date" value="${esc(u.birthdate || '')}"></label><span></span></div>
+            <label class="check"><input type="checkbox" name="marketing" ${u.marketing ? 'checked' : ''}> Recibir novedades y descuentos</label>
+            <button class="btn btn--accent" style="justify-self:start">Guardar cambios</button></form></div>`,
+        direccion: `<div class="panel"><form class="form" data-address>
+            <label>Dirección<input name="line1" value="${esc(a.line1 || '')}" autocomplete="address-line1"></label>
+            <label>Apartamento, barrio, referencias<input name="line2" value="${esc(a.line2 || '')}" autocomplete="address-line2"></label>
+            <div class="form-row"><label>Ciudad<input name="city" value="${esc(a.city || '')}" autocomplete="address-level2"></label><label>Departamento / Estado<input name="region" value="${esc(a.region || '')}" autocomplete="address-level1"></label></div>
+            <button class="btn btn--accent" style="justify-self:start">Guardar dirección</button></form></div>`,
+      };
+      return `
+        <div class="me">
+          <div class="me__av">${esc(initials)}</div>
+          <div class="me__txt"><h1 class="display h-s">${esc(u.name)}</h1><p class="muted">${esc(u.email)} · Miembro desde ${new Date(u.createdAt).toLocaleDateString('es', { month: 'long', year: 'numeric' })}</p></div>
+          <button class="btn btn--ghost btn--sm" data-logout>${icon.logout} Salir</button>
+        </div>
+        <div class="me__stats"><div><b>${orders.length}</b><span>Pedidos</span></div><div><b>${SF.wish.list().length}</b><span>Favoritos</span></div><div><b>${SF.cart.count()}</b><span>En carrito</span></div></div>
+        <div class="seg" role="tablist">${[['pedidos', 'Pedidos'], ['datos', 'Mis datos'], ['direccion', 'Dirección']].map(([k, l]) => `<button role="tab" class="${tab === k ? 'is-on' : ''}" data-ptab="${k}">${l}</button>`).join('')}</div>
+        ${panes[tab]}`;
     },
   };
 
-  function render(id) {
-    if (!views[id]) id = 'tienda';
-    $$('[data-tab]', tabBox).forEach(b => { const on = b.dataset.tab === id; b.classList.toggle('is-on', on); b.setAttribute('aria-selected', on); });
-    view.innerHTML = `<div class="panel-view">${views[id]()}</div>`;
-    const sel = $('[data-sort]', view); if (sel) sel.value = sort;
+  /* ---------------- Resultados de Explorar (sin re-pintar el buscador) ---------------- */
+  function renderResults() {
+    const box = $('[data-ex-results]'); if (!box) return;
+    const q = ex.q.trim().toLowerCase();
+    let a = active().filter(p =>
+      (ex.cat === 'all' || p.category === ex.cat) &&
+      (ex.size === 'all' || (p.stock?.[ex.size] > 0)) &&
+      (!q || [p.name, p.category, p.drop, p.description, ...(p.colors || []).map(c => c.name)].join(' ').toLowerCase().includes(q)));
+    if (ex.sort === 'price-asc') a.sort((x, y) => x.price - y.price);
+    if (ex.sort === 'price-desc') a.sort((x, y) => y.price - x.price);
+    const s = ex.soon && !q && ex.size === 'all' ? soon().filter(p => ex.cat === 'all' || p.category === ex.cat) : [];
+    box.innerHTML = a.length || s.length ? [...a, ...s].map(card).join('')
+      : `<div class="empty" style="grid-column:1/-1"><div class="empty__icon">${icon.search}</div><h3>Sin resultados</h3><p>${q ? `No encontramos “${esc(ex.q)}”… todavía.` : 'Prueba con otros filtros.'}</p></div>`;
+    const sel = $('[data-ex-sort]'); if (sel) sel.value = ex.sort;
+  }
+
+  /* ---------------- Router ---------------- */
+  const alias = { tienda: 'explorar', drop: 'inicio', nosotros: 'inicio', club: 'perfil', guardados: 'favoritos', cuenta: 'perfil', pedidos: 'perfil' };
+  const current = () => { const h = (location.hash || '#inicio').slice(1); return views[h] ? h : (alias[h] || 'inicio'); };
+  let shown = null;
+  function render(force) {
+    const id = current();
+    if (id !== shown) scrollTo({ top: 0, behavior: 'instant' });
+    view.innerHTML = `<div class="view view--${id}">${views[id]()}</div>`;
+    shown = id; SF.setDock(id);
+    document.title = (id === 'inicio' ? 'SF Urban — Women & Men Activewear' : `${SF.views.find(v => v.id === id).label} — SF Urban`);
+    if (id === 'explorar') renderResults();
     const ins = $('[data-inside]', view);
     if (ins) {
-      requestAnimationFrame(() => setTimeout(() => ins.classList.add('is-in'), 60));
+      new IntersectionObserver(([en], io) => { if (en.isIntersecting) { ins.classList.add('is-in'); io.disconnect(); } }, { threshold: .2 }).observe(ins);
       const hi = (i) => $$('[data-f]', ins).forEach(el => el.classList.toggle('is-active', el.dataset.f === String(i)));
       ins.addEventListener('mouseover', (e) => { const t = e.target.closest('[data-f]'); hi(t ? t.dataset.f : -1); });
       ins.addEventListener('mouseleave', () => hi(-1));
     }
-    SF.track('tab_view', { tab: id });
+    SF.reveal(view);
+    if (!force) SF.track('view', { view: id });
   }
-  const current = () => (location.hash || '#tienda').slice(1);
-  function go(id, scroll) {
-    if (current() !== id) history.replaceState(null, '', '#' + id);
-    render(id);
-    if (scroll) { const y = tabBox.getBoundingClientRect().top + scrollY - (SF.$('.site-header').offsetHeight); if (scrollY > y) scrollTo({ top: y }); }
-  }
-  tabBox.addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) go(b.dataset.tab, true); });
-  addEventListener('hashchange', () => { const id = current(); if (id === 'club') return; render(id); });
+  addEventListener('hashchange', () => render());
 
+  /* ---------------- Interacciones ---------------- */
   view.addEventListener('click', (e) => {
-    const c = e.target.closest('[data-cat]'), p = e.target.closest('[data-post]'), n = e.target.closest('[data-notify]');
-    if (c) { cat = c.dataset.cat; render('tienda'); SF.track('filter', { category: cat }); }
-    if (p) openPost(p.dataset.post);
-    if (n) {
+    const t = e.target.closest('[data-go],[data-cat-go],[data-ex-cat],[data-ex-size],[data-notify],[data-auth],[data-ptab]');
+    if (!t) return;
+    if (t.matches('[data-go]')) SF.goView(t.dataset.go);
+    else if (t.matches('[data-cat-go]')) { ex.cat = t.dataset.catGo; SF.goView('explorar'); }
+    else if (t.matches('[data-ex-cat]')) { ex.cat = t.dataset.exCat; $$('[data-ex-cat]').forEach(b => b.classList.toggle('is-on', b === t)); renderResults(); SF.track('filter', { category: ex.cat }); }
+    else if (t.matches('[data-ex-size]')) { ex.size = t.dataset.exSize; $$('[data-ex-size]').forEach(b => b.classList.toggle('is-on', b === t)); renderResults(); }
+    else if (t.matches('[data-auth]')) SF.openAuth(t.dataset.auth);
+    else if (t.matches('[data-ptab]')) { ex.ptab = t.dataset.ptab; render(true); }
+    else if (t.matches('[data-notify]')) {
       const u = SF.auth.user();
       if (!u) { SF.openAuth('register'); SF.toast('Crea tu cuenta y te avisamos cuando llegue', 'info'); return; }
-      if (!SF.db.where('notify', x => x.userId === u.id && x.productId === n.dataset.notify).length) SF.db.insert('notify', { userId: u.id, productId: n.dataset.notify });
-      SF.track('notify_me', { productId: n.dataset.notify }); SF.toast('Listo: te avisaremos cuando llegue ✦');
+      if (!SF.db.where('notify', x => x.userId === u.id && x.productId === t.dataset.notify).length) SF.db.insert('notify', { userId: u.id, productId: t.dataset.notify });
+      t.textContent = '✓ Te avisaremos'; t.disabled = true; SF.track('notify_me', { productId: t.dataset.notify });
     }
   });
-  view.addEventListener('change', (e) => { if (e.target.matches('[data-sort]')) { sort = e.target.value; render('tienda'); } });
-  SF.cart.onChange(() => { if (current() === 'guardados') render('guardados'); });
+  let qTimer;
+  view.addEventListener('input', (e) => {
+    if (e.target.matches('[data-ex-q]')) { ex.q = e.target.value; renderResults(); clearTimeout(qTimer); qTimer = setTimeout(() => ex.q && SF.track('search', { q: ex.q }), 800); }
+  });
+  view.addEventListener('change', (e) => {
+    if (e.target.matches('[data-ex-sort]')) { ex.sort = e.target.value; renderResults(); }
+    if (e.target.matches('[data-ex-soon]')) { ex.soon = e.target.checked; renderResults(); }
+  });
+  view.addEventListener('submit', (e) => {
+    const f = e.target; e.preventDefault();
+    if (f.matches('[data-profile]')) { SF.auth.updateProfile({ name: f.name.value.trim() || SF.auth.user().name, phone: f.phone.value, birthdate: f.birthdate.value, marketing: f.marketing.checked }); SF.toast('Datos guardados ✓'); }
+    if (f.matches('[data-address]')) { SF.auth.updateProfile({ address: { line1: f.line1.value, line2: f.line2.value, city: f.city.value, region: f.region.value } }); SF.toast('Dirección guardada ✓'); }
+  });
 
-  render(current() === 'club' ? 'tienda' : current());
-  if (location.hash === '#club') follow();
+  // Mantener las vistas al día cuando cambian carrito, favoritos o sesión
+  SF.cart.onChange(() => { if (['carrito', 'favoritos', 'perfil'].includes(shown)) render(true); else $$('[data-wish]', view).forEach(b => b.classList.toggle('is-on', SF.wish.has(b.dataset.wish))); });
+  SF.auth.onChange(() => { if (['perfil', 'pagos', 'inicio'].includes(shown)) render(true); });
+
+  render();
 })();

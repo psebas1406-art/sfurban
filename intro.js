@@ -19,9 +19,10 @@
     const cfg = SF.config.intro || {};
     const force = new URLSearchParams(location.search).has('intro');
     let seen = false; try { seen = sessionStorage.getItem('sf-intro') === '1'; } catch {}
-    if (!cfg.enabled || (seen && !force)) { onDone(false); return; }
+    const wantsIntro = SF.db.kv.get('pref:introOn', true), wantsSound = SF.db.kv.get('pref:introSound', true);
+    if (!cfg.enabled || (!force && (seen || !wantsIntro))) { onDone(false); return; }
 
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('reduce-motion');
     const root = document.documentElement;
     root.classList.add('intro-on'); scrollTo(0, 0);
 
@@ -52,11 +53,12 @@
     const setMuteUI = () => { mute.innerHTML = (v.muted ? icon.soundOff : icon.soundOn) + `<span>${v.muted ? 'Activar sonido' : 'Sonido'}</span>`; };
 
     // Intento de reproducción con sonido; si el navegador lo bloquea, pantalla "Entrar"
-    v.muted = false;
+    // (si en Ajustes se desactivó el sonido, arranca en silencio y sin pantalla "Entrar")
+    v.muted = !wantsSound;
     v.play().then(() => { playing(); setMuteUI(); }).catch(() => { if (!finished) gate.hidden = false; });
 
     $('[data-enter]', el).addEventListener('click', () => {
-      v.muted = false; v.currentTime = 0;
+      v.muted = !wantsSound; v.currentTime = 0;
       v.play().then(playing).catch(() => { v.muted = true; v.play().then(playing).catch(showLogo); });
       setMuteUI();
     });
@@ -93,13 +95,13 @@
       const bx = sb.left - x0, by = sb.top - y0;
       const X = tb.left - bx * s, Y = tb.top - by * s;
       tag.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
-      setTimeout(() => { el.classList.add('is-out'); onDone(true); }, 250);
+      setTimeout(() => { el.classList.add('is-out'); document.documentElement.classList.add('intro-reveal'); onDone(true); }, 250);
       await run(logo, [{ opacity: 1, transform: at(x0, y0) }, { opacity: 1, transform: at(X, Y, s) }], { duration: 1100, easing: 'cubic-bezier(.65,0,.35,1)' });
       finish();
     }
 
     function finish() {
-      root.classList.remove('intro-on');
+      root.classList.remove('intro-on', 'intro-reveal');
       if (reduce) onDone(false);
       run(el, [{ opacity: 1 }, { opacity: 0 }], { duration: reduce ? 1 : 150 }).then(() => { v.removeAttribute('src'); v.load(); el.remove(); });
       if (force) history.replaceState(null, '', location.pathname + location.hash);

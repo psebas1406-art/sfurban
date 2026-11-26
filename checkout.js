@@ -12,7 +12,7 @@
   function render() {
     const lines = SF.cart.detailed();
     if (!lines.length) {
-      root.innerHTML = `<div class="success" style="padding-top:calc(var(--header-h) + 80px)"><div class="empty__icon">${icon.bag}</div><h1 class="display h-m">Tu bolsa está <span class="serif">vacía</span></h1><a class="btn btn--accent" href="index.html#tienda">Ir a la tienda ${icon.arrow}</a></div>`;
+      root.innerHTML = `<div class="success" style="padding-top:calc(var(--header-h) + 80px)"><div class="empty__icon">${icon.cart}</div><h1 class="display h-m">Tu carrito está <span class="serif">vacía</span></h1><a class="btn btn--accent" href="index.html#explorar">Explorar ${icon.arrow}</a></div>`;
       return;
     }
     const u = SF.auth.user() || {}; const a = u.address || {}; const t = SF.cart.totals();
@@ -97,8 +97,8 @@
         <h1 class="display h-m">¡Gracias, <span class="serif">${esc(d.name.split(' ')[0])}</span>!</h1>
         <p class="muted" style="max-width:480px">Tu pedido quedó reservado por ${SF.money(order.total)}. Te escribiremos a ${esc(d.email)} para coordinar el pago y el envío.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-          ${SF.auth.user() ? `<a class="btn btn--accent" href="cuenta.html#pedidos">Ver mis pedidos</a>` : `<button class="btn btn--accent" data-reg>Crear cuenta para seguir tu pedido</button>`}
-          <a class="btn btn--ghost" href="index.html">Volver al inicio</a>
+          ${SF.auth.user() ? `<a class="btn btn--accent" href="index.html#perfil">Ver mis pedidos</a>` : `<button class="btn btn--accent" data-reg>Crear cuenta para seguir tu pedido</button>`}
+          <a class="btn btn--ghost" href="index.html#inicio">Volver al inicio</a>
         </div>
       </div>`;
     $('[data-reg]')?.addEventListener('click', () => SF.openAuth('register'));

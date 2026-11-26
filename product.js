@@ -1,6 +1,6 @@
 /* =========================================================
    Página de producto: galería con zoom, tallas con stock,
-   añadir a la bolsa, favoritos, detalles y barra fija en móvil.
+   añadir al carrito, favoritos y detalles.
    ========================================================= */
 (function () {
   const { $, $$, esc, icon } = SF;
@@ -12,7 +12,7 @@
   const root = $('[data-pdp]');
 
   if (!p || p.status !== 'active') {
-    root.innerHTML = `<div class="success" style="padding-top:calc(var(--header-h) + 80px)"><h1 class="display h-m">Esta prenda <span class="serif">aún no llega</span></h1><p class="muted">Estamos preparando nuevas piezas. Mientras tanto, mira lo que ya está disponible.</p><a class="btn btn--accent" href="index.html#tienda">Ir a la tienda ${icon.arrow}</a></div>`;
+    root.innerHTML = `<div class="success" style="padding-top:calc(var(--header-h) + 80px)"><h1 class="display h-m">Esta prenda <span class="serif">aún no llega</span></h1><p class="muted">Estamos preparando nuevas piezas. Mientras tanto, mira lo que ya está disponible.</p><a class="btn btn--accent" href="index.html#explorar">Explorar ${icon.arrow}</a></div>`;
     return;
   }
   document.title = `${p.name} — SF Urban`;
@@ -27,7 +27,7 @@
       <img src="${p.images[0]}" alt="${esc(p.name)}">
     </div>
     <div class="pdp__info">
-      <nav class="crumbs" aria-label="Migas de pan"><a href="index.html">Inicio</a> / <a href="index.html#tienda">Tienda</a> / <span>${esc(p.name)}</span></nav>
+      <nav class="crumbs" aria-label="Migas de pan"><a href="index.html#inicio">Inicio</a> / <a href="index.html#explorar">Explorar</a> / <span>${esc(p.name)}</span></nav>
       <div class="card__badges" style="position:static;margin-bottom:14px">${p.badges.map((b, k) => `<span class="tag ${k ? '' : 'tag--accent'}">${esc(b)}</span>`).join('')}</div>
       <h1 class="display">${esc(p.name)}</h1>
       <div class="pdp__price">${SF.money(p.price)}${p.compareAt ? ` <s class="muted" style="font-size:.6em">${SF.money(p.compareAt)}</s>` : ''}</div>
@@ -41,7 +41,7 @@
       <p class="muted" style="font-size:13px;margin-top:8px" data-stock></p>
 
       <div class="pdp__actions">
-        <button class="btn btn--accent btn--block" data-add>Añadir a la bolsa ${icon.arrow}</button>
+        <button class="btn btn--accent btn--block" data-add>Añadir al carrito ${icon.cart}</button>
         <button class="icon-btn ${wish ? 'is-on' : ''}" data-wish="${p.id}" aria-pressed="${wish}" aria-label="Guardar en favoritos">${icon.heart}</button>
       </div>
 
@@ -56,7 +56,7 @@
       <details class="acc"><summary>Envíos y devoluciones</summary><p class="muted">Despacho en 1–3 días hábiles. Envío nacional. Cambios dentro de 30 días con etiquetas. <em>(Ajustar a la política real.)</em></p></details>
     </div>
   </div>
-  <div class="sticky-buy" data-sticky><div style="flex:1;line-height:1.2"><strong>${esc(p.name)}</strong><br><span style="opacity:.7">${SF.money(p.price)}</span></div><button class="btn btn--accent btn--sm" data-add>Añadir</button></div>`;
+  `;
 
   const lbl = $('[data-size-lbl]'), stock = $('[data-stock]');
   $$('.size').forEach(b => b.addEventListener('click', () => {
@@ -74,7 +74,7 @@
       s.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(0)' }], { duration: 320 });
       return;
     }
-    try { SF.cart.add(p.id, size); SF.bump(); SF.toast(`${p.name} (${size}) añadido`); setTimeout(() => SF.open('cart'), 300); }
+    try { SF.cart.add(p.id, size); SF.bump(); SF.toast(`${p.name} (${size}) en tu carrito`, 'ok', { label: 'Ver carrito', href: 'index.html#carrito' }); }
     catch (ex) { SF.toast(ex.message, 'err'); }
   }));
 
@@ -84,7 +84,4 @@
   g.addEventListener('mousemove', (e) => { const r = g.getBoundingClientRect(); img.style.setProperty('--zx', ((e.clientX - r.left) / r.width) * 100 + '%'); img.style.setProperty('--zy', ((e.clientY - r.top) / r.height) * 100 + '%'); });
   g.addEventListener('mouseleave', () => g.classList.remove('is-zoom'));
 
-  // Barra fija en móvil cuando el botón principal sale de vista
-  const sticky = $('[data-sticky]');
-  new IntersectionObserver(([en]) => sticky.classList.toggle('is-on', !en.isIntersecting && en.boundingClientRect.top < 0)).observe($('.pdp__actions'));
 })();

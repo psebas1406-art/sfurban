@@ -14,6 +14,7 @@
     Object.entries(pal.vars).forEach(([k, v]) => r.setProperty(k, v));
     r.setProperty('--f-display', font.display); r.setProperty('--f-body', font.body); r.setProperty('--f-serif', font.serif);
     document.documentElement.dataset.font = fk;
+    document.documentElement.classList.toggle('reduce-motion', !!SF.db.kv.get('pref:reduceMotion', false));
   };
   apply(); // antes de pintar, evita parpadeo
 

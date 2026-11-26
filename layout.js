@@ -1,7 +1,9 @@
 /* =========================================================
-   Layout compartido: barra de anuncios, header, footer, menú móvil,
-   buscador, carrito lateral, modal de cuenta, toasts, chat.
-   Se inyecta en todas las páginas (data-page en <body>).
+   Layout compartido (todas las páginas)
+   - Header: ajustes (engranaje) a la izquierda · logo a la derecha.
+   - Barra flotante "liquid glass": Inicio · Explorar · Favoritos ·
+     Carrito · Pagos · Perfil  (vistas en index.html#<vista>).
+   - Panel de ajustes, modal de cuenta, toasts, chat.
    ========================================================= */
 (function () {
   const $ = (s, r = document) => r.querySelector(s);
@@ -10,23 +12,34 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   SF.esc = esc;
 
+  /* ---------- Íconos (trazo 1.8, esquinas redondeadas, estilo de la marca) ---------- */
+  const I = (d, extra = '') => `<svg viewBox="0 0 24 24" aria-hidden="true" ${extra}>${d}</svg>`;
   const icon = {
-    search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
-    user: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
-    heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>',
-    bag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 13H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>',
-    menu: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
-    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
-    chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5z"/></svg>',
-    arrow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
-    home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5.5v-5.5h-5V20H4z"/></svg>',
-    grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M9.33 4v16M14.67 4v16M4 9.33h16M4 14.67h16"/></svg>',
-    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg>',
-    bookmark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4.5L6 20z"/></svg>',
-    info: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg>',
-    share: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 10 14M21 4l-6.5 16-3.5-6.5L4.5 10z"/></svg>',
-    soundOn: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
-    soundOff: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="m17 9.5 5 5M22 9.5l-5 5"/></svg>',
+    home: I('<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h4.5v-5.5h4V20h4.5V9.5"/>'),
+    search: I('<circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.6-4.6"/>'),
+    heart: I('<path d="M12 20s-7.5-4.6-7.5-10.4A4.1 4.1 0 0 1 12 7.3a4.1 4.1 0 0 1 7.5 2.3C19.5 15.4 12 20 12 20z"/>'),
+    cart: I('<path d="M2.5 4h2.6l2.3 11h10.3l2.1-7.6H6.3"/><circle cx="9.5" cy="19.3" r="1.4"/><circle cx="16.8" cy="19.3" r="1.4"/>'),
+    card: I('<rect x="2.8" y="5.2" width="18.4" height="13.6" rx="2.6"/><path d="M2.8 9.6h18.4"/><path d="M6.5 14.8h4"/>'),
+    user: I('<circle cx="12" cy="7.6" r="3.6"/><path d="M4.8 20.2c.9-4 3.7-6.4 7.2-6.4s6.3 2.4 7.2 6.4"/>'),
+    gear: I('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+    bag: I('<path d="M5 8h14l-1 13H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>'),
+    close: I('<path d="M6 6l12 12M18 6 6 18"/>'),
+    chat: I('<path d="M4 5h16v11H9l-5 4V5z"/>'),
+    arrow: I('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+    back: I('<path d="M19 12H5M11 6l-6 6 6 6"/>'),
+    share: I('<path d="M21 4 10 14M21 4l-6.5 16-3.5-6.5L4.5 10z"/>'),
+    bookmark: I('<path d="M6 4h12v16l-6-4.5L6 20z"/>'),
+    soundOn: I('<path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>'),
+    soundOff: I('<path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="m17 9.5 5 5M22 9.5l-5 5"/>'),
+    truck: I('<path d="M2.5 6h11v10h-11z"/><path d="M13.5 9.5h4l3 3.2V16h-7"/><circle cx="6.5" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/>'),
+    shield: I('<path d="M12 3.5 19 6v5.5c0 4.4-3 7.8-7 9-4-1.2-7-4.6-7-9V6z"/><path d="m9 12 2.2 2.2L15.5 10"/>'),
+    bank: I('<path d="M3.5 9 12 4l8.5 5"/><path d="M5 9.5V17M9.7 9.5V17M14.3 9.5V17M19 9.5V17"/><path d="M3.5 19.5h17"/>'),
+    phone: I('<rect x="6.5" y="2.8" width="11" height="18.4" rx="2.4"/><path d="M10.5 17.8h3"/>'),
+    cash: I('<rect x="2.8" y="6.5" width="18.4" height="11" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/>'),
+    box: I('<path d="M3.5 7.5 12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5 12 11.5l8.5-4M12 11.5v9"/>'),
+    pin: I('<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/>'),
+    logout: I('<path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14"/><path d="M10 16l-4-4 4-4M6 12h10"/>'),
+    filter: I('<path d="M4 6h16M7 12h10M10 18h4"/>'),
   };
   SF.icon = icon;
 
@@ -34,63 +47,117 @@
   SF.isoSVG = `<svg class="brand__iso" viewBox="240 385 610 440" aria-hidden="true"><g fill="#F5F5F2"><polygon points="338,395 897,395 880,479 321,479"/><polygon points="321,479 406,479 388,563 553,563 500,813 250,813 267,731 436,731 453,647 285,647"/><polygon points="628,479 713,479 641,813 558,813"/></g><polygon fill="#E4002B" points="697,556 838,604 677,653"/></svg>`;
   const hoodSVG = `<svg class="brand__hood" viewBox="0 0 100 112" aria-hidden="true"><path fill="#E4002B" d="M50 4c11 0 19 8 19 18v4l15 7 12 40-11 3-5-18v52H20V58l-5 18-11-3 12-40 15-7v-4C31 12 39 4 50 4z"/><path fill="none" stroke="#0D0D0F" stroke-width="4" d="M41 20c0-6 4-9 9-9s9 3 9 9-4 9-9 9-9-3-9-9zM46 29v14M54 29v14M33 76h34l3 20H30z"/></svg>`;
   SF.brandMark = (cls = '') => `<span class="brand ${cls}">${SF.isoSVG}<span class="brand__word">Urban</span>${hoodSVG}</span>`;
-  const logo = `<a href="index.html" class="logo" aria-label="SF Urban, inicio" data-header-logo>${SF.brandMark()}</a>`;
-  SF.logo = logo;
+  SF.logo = `<a href="index.html#inicio" class="logo" aria-label="SF Urban, inicio" data-header-logo>${SF.brandMark()}</a>`;
+
+  /* ---------- Navegación entre vistas ---------- */
+  SF.views = [
+    { id: 'inicio', label: 'Inicio', icon: 'home' },
+    { id: 'explorar', label: 'Explorar', icon: 'search' },
+    { id: 'favoritos', label: 'Favoritos', icon: 'heart' },
+    { id: 'carrito', label: 'Carrito', icon: 'cart' },
+    { id: 'pagos', label: 'Pagos', icon: 'card' },
+    { id: 'perfil', label: 'Perfil', icon: 'user' },
+  ];
+  const isHome = () => document.body.dataset.page === 'home';
+  SF.goView = (id) => { if (isHome()) { if (location.hash !== '#' + id) location.hash = id; else dispatchEvent(new HashChangeEvent('hashchange')); } else location.href = 'index.html#' + id; };
 
   function header() {
     return `
     <header class="site-header" id="siteHeader">
       <div class="site-header__inner">
-        <nav class="header-actions" aria-label="Acciones">
-          <a class="icon-btn hide-mobile" href="index.html" aria-label="Inicio">${icon.home}<span class="lbl">Inicio</span></a>
-          <button class="icon-btn" data-open="search" aria-label="Buscar">${icon.search}<span class="lbl">Buscar</span></button>
-          <a class="icon-btn hide-mobile" href="cuenta.html#favoritos" aria-label="Favoritos">${icon.heart}<span class="lbl">Favoritos</span><span class="badge" data-wish-count hidden>0</span></a>
-          <button class="icon-btn hide-mobile" data-account aria-label="Mi cuenta">${icon.user}<span class="lbl">Cuenta</span><span class="dot" data-user-dot hidden></span></button>
-          <button class="icon-btn" data-open="cart" aria-label="Bolsa">${icon.bag}<span class="lbl">Bolsa</span><span class="badge" data-cart-count hidden>0</span></button>
-        </nav>
-        ${logo}
+        <button class="gear-btn" data-settings aria-label="Ajustes" aria-expanded="false" aria-controls="settingsPanel">${icon.gear}</button>
+        ${SF.logo}
       </div>
     </header>`;
+  }
+
+  function dock() {
+    return `
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <filter id="sf-glass" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.04" numOctaves="2" seed="4" result="noise"/>
+        <feGaussianBlur in="noise" stdDeviation="2.5" result="soft"/>
+        <feDisplacementMap in="SourceGraphic" in2="soft" scale="42" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </svg>
+    <nav class="dock" aria-label="Navegación principal" data-dock>
+      <span class="dock__pill" data-dock-pill aria-hidden="true"></span>
+      ${SF.views.map(v => `
+        <a class="dock__item" href="index.html#${v.id}" data-dock-item="${v.id}" aria-label="${v.label}">
+          <span class="dock__ico">${icon[v.icon]}${v.id === 'carrito' ? '<span class="badge" data-cart-count hidden>0</span>' : ''}${v.id === 'favoritos' ? '<span class="badge badge--soft" data-wish-count hidden>0</span>' : ''}${v.id === 'perfil' ? '<span class="dot" data-user-dot hidden></span>' : ''}</span>
+          <span class="dock__lbl">${v.label}</span>
+        </a>`).join('')}
+    </nav>`;
   }
 
   function footer() {
     const b = SF.config.brand;
     return `
     <footer class="site-footer">
-      <nav class="footer-links">
-        <a href="index.html#tienda">Tienda</a><a href="index.html#nosotros">Nosotros</a>
-        <a href="#" data-soon="Guía de tallas">Tallas</a><a href="#" data-soon="Envíos y devoluciones">Envíos</a>
-        <a href="mailto:${esc(b.email)}">Contacto</a><a href="${esc(b.instagram)}" target="_blank" rel="noopener">Instagram</a>
-        <a href="${esc(b.tiktok)}" target="_blank" rel="noopener">TikTok</a><a href="#" data-soon="Términos">Términos</a><a href="#" data-soon="Privacidad">Privacidad</a>
-        <a href="index.html?intro=1">Ver intro</a>
-      </nav>
-      <p>© ${new Date().getFullYear()} ${esc(b.name)} · <span class="serif">${esc(b.motto)}</span></p>
-    </footer>
-    <nav class="bottom-nav" aria-label="Navegación">
-      <a href="index.html" aria-label="Inicio">${icon.home}</a>
-      <button data-open="search" aria-label="Buscar">${icon.search}</button>
-      <button data-open="cart" aria-label="Bolsa">${icon.bag}<span class="badge" data-cart-count hidden>0</span></button>
-      <a href="cuenta.html#favoritos" aria-label="Favoritos">${icon.heart}<span class="badge" data-wish-count hidden>0</span></a>
-      <button data-account aria-label="Mi cuenta">${icon.user}<span class="dot" data-user-dot hidden></span></button>
-    </nav>`;
+      ${SF.isoSVG}
+      <p class="serif">${esc(b.motto)}</p>
+      <p>© ${new Date().getFullYear()} ${esc(b.name)} · <a href="mailto:${esc(b.email)}">${esc(b.email)}</a></p>
+    </footer>`;
   }
+
+  /* ---------- Panel de ajustes ---------- */
+  const pref = {
+    get: (k, d) => SF.db.kv.get('pref:' + k, d),
+    set: (k, v) => SF.db.kv.set('pref:' + k, v),
+  };
+  SF.pref = pref;
+  const toggle = (key, def, label, hint) => `
+    <label class="set-row"><span><b>${label}</b>${hint ? `<small>${hint}</small>` : ''}</span>
+      <input type="checkbox" class="switch" data-pref="${key}" ${pref.get(key, def) ? 'checked' : ''}></label>`;
+  function settingsHTML() {
+    const u = SF.auth.user();
+    return `
+      <div class="settings__head"><h2>Ajustes</h2><button class="icon-btn" data-settings-close aria-label="Cerrar">${icon.close}</button></div>
+      <div class="settings__body">
+        <section><h3>Intro de bienvenida</h3>
+          ${toggle('introOn', true, 'Mostrar al entrar', 'Una vez por visita')}
+          ${toggle('introSound', true, 'Con sonido', 'El navegador pedirá un toque para activarlo')}
+          <a class="set-row set-row--link" href="index.html?intro=1"><b>Ver la intro ahora</b>${icon.arrow}</a>
+        </section>
+        <section><h3>Experiencia</h3>
+          ${toggle('reduceMotion', false, 'Reducir animaciones', 'Menos movimiento en la página')}
+        </section>
+        <section><h3>Cuenta</h3>
+          <a class="set-row set-row--link" href="index.html#perfil" data-settings-close><b>${u ? 'Mi perfil' : 'Iniciar sesión o registrarme'}</b>${icon.arrow}</a>
+          <a class="set-row set-row--link" href="index.html#pagos" data-settings-close><b>Medios de pago</b>${icon.arrow}</a>
+          ${u ? `<button class="set-row set-row--link" data-logout><b>Cerrar sesión</b>${icon.logout}</button>` : ''}
+        </section>
+        <section><h3>Ayuda</h3>
+          <button class="set-row set-row--link" data-chat><b>Chatear con nosotros</b>${icon.chat}</button>
+          <a class="set-row set-row--link" href="mailto:${esc(SF.config.brand.email)}"><b>Escribir un correo</b>${icon.arrow}</a>
+          <button class="set-row set-row--link" data-soon="Guía de tallas"><b>Guía de tallas</b>${icon.arrow}</button>
+          <button class="set-row set-row--link" data-soon="Envíos y cambios"><b>Envíos y cambios</b>${icon.arrow}</button>
+        </section>
+        <section><h3>Privacidad</h3>
+          <button class="set-row set-row--link set-row--danger" data-wipe><b>Borrar mis datos de este dispositivo</b>${icon.close}</button>
+          <button class="set-row set-row--link" data-soon="Términos y privacidad"><b>Términos y política de privacidad</b>${icon.arrow}</button>
+        </section>
+        <p class="settings__foot">${SF.isoSVG}<span>SF Urban · v0.3</span></p>
+      </div>`;
+  }
+  function openSettings() {
+    const p = $('#settingsPanel'); p.innerHTML = settingsHTML();
+    p.classList.add('is-open'); p.setAttribute('aria-hidden', 'false');
+    $('[data-settings]').setAttribute('aria-expanded', 'true'); $('[data-settings]').classList.add('is-on');
+    showScrim(); setTimeout(() => $('[data-settings-close]', p)?.focus(), 50);
+  }
+  function closeSettings() {
+    const p = $('#settingsPanel'); if (!p.classList.contains('is-open')) return;
+    p.classList.remove('is-open'); p.setAttribute('aria-hidden', 'true');
+    $('[data-settings]').setAttribute('aria-expanded', 'false'); $('[data-settings]').classList.remove('is-on');
+    hideScrim();
+  }
+  SF.applyPrefs = () => document.documentElement.classList.toggle('reduce-motion', !!pref.get('reduceMotion', false));
 
   function overlays() {
     return `
     <div class="scrim" data-scrim hidden></div>
-
-    <aside class="drawer drawer--right" id="cartDrawer" aria-label="Carrito" aria-hidden="true">
-      <div class="drawer__head"><h3>Tu bolsa <span class="muted" data-cart-count-text></span></h3><button class="icon-btn" data-close aria-label="Cerrar">${icon.close}</button></div>
-      <div class="cart-body" data-cart-body></div>
-      <div class="cart-foot" data-cart-foot></div>
-    </aside>
-
-    <div class="search-overlay" id="searchOverlay" aria-hidden="true">
-      <div class="container">
-        <div class="search-bar">${icon.search}<input type="search" placeholder="Busca prendas, drops, categorías…" aria-label="Buscar" data-search-input><button class="icon-btn" data-close aria-label="Cerrar">${icon.close}</button></div>
-        <div class="search-results" data-search-results></div>
-      </div>
-    </div>
+    <aside class="settings" id="settingsPanel" aria-label="Ajustes" aria-hidden="true"></aside>
 
     <div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-hidden="true">
       <div class="modal__card">
@@ -144,92 +211,62 @@
     </div>`;
   }
 
-  /* ---------- Toasts ---------- */
-  SF.toast = (msg, type = 'ok') => {
+  /* ---------- Toasts (con acción opcional) ---------- */
+  SF.toast = (msg, type = 'ok', action) => {
     const box = $('[data-toasts]'); if (!box) return;
-    const t = document.createElement('div'); t.className = 'toast toast--' + type; t.textContent = msg;
+    const t = document.createElement('div'); t.className = 'toast toast--' + type;
+    t.innerHTML = `<span>${esc(msg)}</span>${action ? `<a href="${action.href}">${esc(action.label)}</a>` : ''}`;
     box.appendChild(t); requestAnimationFrame(() => t.classList.add('is-in'));
-    setTimeout(() => { t.classList.remove('is-in'); setTimeout(() => t.remove(), 400); }, 2800);
+    setTimeout(() => { t.classList.remove('is-in'); setTimeout(() => t.remove(), 400); }, action ? 4200 : 2800);
   };
 
-  /* ---------- Paneles (drawers / overlays / modal) ---------- */
+  /* ---------- Velo + modal de cuenta ---------- */
   let lastFocus = null;
-  const panels = { menu: '#menuDrawer', cart: '#cartDrawer', search: '#searchOverlay', auth: '#authModal' };
+  function showScrim() { const sc = $('[data-scrim]'); sc.hidden = false; requestAnimationFrame(() => sc.classList.add('is-on')); document.documentElement.classList.add('no-scroll'); }
+  function hideScrim() { const sc = $('[data-scrim]'); sc.classList.remove('is-on'); setTimeout(() => { if (!sc.classList.contains('is-on')) sc.hidden = true; }, 300); document.documentElement.classList.remove('no-scroll'); }
   SF.open = (name) => {
+    if (name === 'cart') return SF.goView('carrito');
+    if (name === 'search') return SF.goView('explorar');
+    if (name !== 'auth') return;
     SF.closeAll(true); lastFocus = document.activeElement;
-    const el = $(panels[name]); if (!el) return;
-    el.classList.add('is-open'); el.setAttribute('aria-hidden', 'false');
-    if (name !== 'search') { $('[data-scrim]').hidden = false; requestAnimationFrame(() => $('[data-scrim]').classList.add('is-on')); }
-    document.documentElement.classList.add('no-scroll');
-    if (name === 'cart') renderCart();
-    setTimeout(() => { const f = el.querySelector('input:not([type=hidden]):not([hidden]), button'); f && f.focus(); }, 60);
+    const el = $('#authModal'); el.classList.add('is-open'); el.setAttribute('aria-hidden', 'false');
+    showScrim(); setTimeout(() => { const f = el.querySelector('form:not([hidden]) input'); f && f.focus(); }, 60);
   };
   SF.closeAll = (silent) => {
-    Object.values(panels).forEach(s => { const el = $(s); if (el) { el.classList.remove('is-open'); el.setAttribute('aria-hidden', 'true'); } });
-    const sc = $('[data-scrim]'); if (sc) { sc.classList.remove('is-on'); setTimeout(() => { if (!sc.classList.contains('is-on')) sc.hidden = true; }, 300); }
-    document.documentElement.classList.remove('no-scroll');
+    const m = $('#authModal'); const wasOpen = m.classList.contains('is-open') || $('#settingsPanel').classList.contains('is-open');
+    m.classList.remove('is-open'); m.setAttribute('aria-hidden', 'true');
+    closeSettings();
+    if (wasOpen) hideScrim();
     if (!silent && lastFocus) lastFocus.focus();
   };
-
-  /* ---------- Carrito ---------- */
-  function renderCart() {
-    const body = $('[data-cart-body]'), foot = $('[data-cart-foot]'); if (!body) return;
-    const lines = SF.cart.detailed(), t = SF.cart.totals();
-    $('[data-cart-count-text]').textContent = lines.length ? `(${SF.cart.count()})` : '';
-    if (!lines.length) {
-      body.innerHTML = `<div class="empty"><div class="empty__icon">${icon.bag}</div><p>Tu bolsa está vacía.</p><a class="btn btn--ghost" href="index.html#tienda" data-close>Ver la tienda</a></div>`;
-      foot.innerHTML = ''; return;
-    }
-    const pct = Math.min(100, (t.subtotal / t.freeFrom) * 100);
-    body.innerHTML = `
-      <div class="free-ship"><p>${t.missingForFree ? `Te faltan <strong>${SF.money(t.missingForFree)}</strong> para envío gratis` : '¡Tienes <strong>envío gratis</strong>! 🎉'}</p><div class="bar"><span style="width:${pct}%"></span></div></div>
-      ${lines.map(l => `
-      <div class="cart-line">
-        <a href="producto.html?id=${l.productId}" class="cart-line__img"><img src="${l.product.images[0]}" alt="${esc(l.product.name)}"></a>
-        <div class="cart-line__info">
-          <a href="producto.html?id=${l.productId}" class="cart-line__name">${esc(l.product.name)}</a>
-          <span class="muted">Talla ${esc(l.size)} · ${esc(l.product.colors?.[0]?.name || '')}</span>
-          <div class="qty" data-line="${l.productId}|${l.size}">
-            <button data-q="-1" aria-label="Menos">−</button><span>${l.qty}</span><button data-q="1" aria-label="Más">+</button>
-          </div>
-        </div>
-        <div class="cart-line__end"><strong>${SF.money(l.lineTotal)}</strong><button class="link-btn" data-rm="${l.productId}|${l.size}">Quitar</button></div>
-      </div>`).join('')}`;
-    foot.innerHTML = `
-      <div class="sum-row"><span>Subtotal</span><span>${SF.money(t.subtotal)}</span></div>
-      <div class="sum-row muted"><span>Envío</span><span>${t.shipping ? SF.money(t.shipping) : 'Gratis'}</span></div>
-      <div class="sum-row sum-row--total"><span>Total</span><span>${SF.money(t.total)}</span></div>
-      <a class="btn btn--accent btn--block" href="checkout.html">Finalizar compra ${icon.arrow}</a>`;
-  }
-  SF.renderCart = renderCart;
 
   function updateBadges() {
     const c = SF.cart.count(), w = SF.wish.list().length;
     $$('[data-cart-count]').forEach(b => { b.textContent = c; b.hidden = !c; });
     $$('[data-wish-count]').forEach(b => { b.textContent = w; b.hidden = !w; });
     const u = SF.auth.user(); $$('[data-user-dot]').forEach(d => d.hidden = !u);
-    if ($('#cartDrawer')?.classList.contains('is-open')) renderCart();
   }
-  SF.bump = () => { const b = $('[data-cart-count]'); if (b) { b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); } };
+  SF.bump = () => { $$('[data-cart-count]').forEach(b => { b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }); };
 
-  /* ---------- Buscador ---------- */
-  function search(q) {
-    const box = $('[data-search-results]'); q = q.trim().toLowerCase();
-    if (!q) { box.innerHTML = `<p class="muted">Sugerencias: <button class="chip" data-q="conjunto">conjunto</button> <button class="chip" data-q="burdeos">burdeos</button> <button class="chip" data-q="drop">drop 01</button></p>`; return; }
-    const res = SF.catalog.filter(p => p.status === 'active' && [p.name, p.category, p.drop, p.description, ...(p.colors || []).map(c => c.name)].join(' ').toLowerCase().includes(q));
-    SF.track('search', { q });
-    box.innerHTML = res.length ? res.map(p => `<a class="search-hit" href="producto.html?id=${p.id}"><img src="${p.images[0]}" alt=""><span><strong>${esc(p.name)}</strong><br><span class="muted">${SF.money(p.price)}</span></span></a>`).join('')
-      : `<p class="muted">No encontramos “${esc(q)}”… todavía. Vienen más prendas pronto.</p>`;
-  }
+  /* ---------- Barra flotante: marca la vista activa con la "burbuja" ---------- */
+  SF.setDock = (id) => {
+    const dockEl = $('[data-dock]'); if (!dockEl) return;
+    const pill = $('[data-dock-pill]', dockEl);
+    const item = $(`[data-dock-item="${id}"]`, dockEl);
+    $$('[data-dock-item]', dockEl).forEach(a => { const on = a === item; a.classList.toggle('is-on', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
+    if (!item) { pill.style.opacity = '0'; return; }
+    pill.style.opacity = '1';
+    pill.style.width = item.offsetWidth + 'px';
+    pill.style.transform = `translateX(${item.offsetLeft}px)`;
+  };
 
-  /* ---------- Auth modal ---------- */
+  /* ---------- Cuenta ---------- */
   function authTab(name) {
     $$('[data-auth-form]').forEach(f => f.hidden = f.dataset.authForm !== name);
     $$('.tab[data-auth-tab]').forEach(t => t.classList.toggle('is-active', t.dataset.authTab === name));
     $$('[data-auth-form] [data-error]').forEach(e => e.textContent = '');
   }
   SF.openAuth = (tab = 'login') => { authTab(tab); SF.open('auth'); };
-
   async function onAuthSubmit(e) {
     e.preventDefault(); const f = e.target; const type = f.dataset.authForm; const err = f.querySelector('[data-error]');
     const data = Object.fromEntries(new FormData(f)); err.textContent = '';
@@ -247,53 +284,57 @@
     btn.disabled = false;
   }
 
-  /* ---------- Header al hacer scroll ---------- */
-  function headerScroll() {
-    const h = $('#siteHeader'); let last = 0;
-    addEventListener('scroll', () => {
-      const y = scrollY;
-      h.classList.toggle('is-scrolled', y > 10);
-      h.classList.toggle('is-hidden', y > last && y > 400 && !document.documentElement.classList.contains('no-scroll'));
-      last = y;
-    }, { passive: true });
-  }
-
   /* ---------- Revelado al hacer scroll ---------- */
   SF.reveal = (root = document) => {
-    const io = new IntersectionObserver((ents) => ents.forEach(en => { if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); } }), { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    const io = new IntersectionObserver((ents) => ents.forEach(en => { if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); } }), { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
     $$('[data-reveal]:not(.is-in)', root).forEach(el => io.observe(el));
   };
 
   /* ---------- Init ---------- */
   SF.mountLayout = () => {
+    SF.applyPrefs();
     document.body.insertAdjacentHTML('afterbegin', header());
-    document.body.insertAdjacentHTML('beforeend', footer() + overlays());
+    document.body.insertAdjacentHTML('beforeend', footer() + dock() + overlays());
+    // Refracción "liquid glass" real solo en navegadores Chromium (en el resto: vidrio esmerilado)
+    if (navigator.userAgentData?.brands?.some(b => /Chromium/i.test(b.brand))) document.documentElement.classList.add('glass-refract');
 
     document.addEventListener('click', (e) => {
-      const t = e.target.closest('[data-open],[data-close],[data-scrim],[data-account],[data-auth-tab],[data-q],[data-rm],[data-soon],[data-chat],[data-chat-close],[data-wish]');
+      const t = e.target.closest('[data-close],[data-scrim],[data-auth-tab],[data-q],[data-rm],[data-soon],[data-chat],[data-chat-close],[data-wish],[data-settings],[data-settings-close],[data-logout],[data-wipe]');
       if (!t) return;
-      if (t.matches('[data-open]')) { e.preventDefault(); SF.open(t.dataset.open); if (t.dataset.open === 'search') search($('[data-search-input]').value); }
+      if (t.matches('[data-settings]')) { $('#settingsPanel').classList.contains('is-open') ? closeSettings() : openSettings(); }
+      else if (t.matches('[data-settings-close]')) { closeSettings(); }
       else if (t.matches('[data-close],[data-scrim]')) { SF.closeAll(); }
-      else if (t.matches('[data-account]')) { SF.auth.user() ? (location.href = 'cuenta.html') : SF.openAuth('login'); }
       else if (t.matches('[data-auth-tab]')) { authTab(t.dataset.authTab); }
-      else if (t.matches('.chip[data-q]')) { const i = $('[data-search-input]'); i.value = t.dataset.q; search(i.value); }
       else if (t.matches('.qty [data-q]')) { const [id, size] = t.closest('[data-line]').dataset.line.split('|'); const l = SF.cart.items().find(i => i.productId === id && i.size === size); SF.cart.setQty(id, size, l.qty + +t.dataset.q); }
       else if (t.matches('[data-rm]')) { const [id, size] = t.dataset.rm.split('|'); SF.cart.remove(id, size); }
       else if (t.matches('[data-soon]')) { e.preventDefault(); SF.toast(`${t.dataset.soon}: disponible muy pronto ✦`, 'info'); }
-      else if (t.matches('[data-chat]')) { const p = $('[data-chat-panel]'); p.hidden = !p.hidden; SF.track('chat_open'); }
+      else if (t.matches('[data-chat]')) { closeSettings(); const p = $('[data-chat-panel]'); p.hidden = !p.hidden; SF.track('chat_open'); }
       else if (t.matches('[data-chat-close]')) { $('[data-chat-panel]').hidden = true; }
-      else if (t.matches('[data-wish]')) { e.preventDefault(); const on = SF.wish.toggle(t.dataset.wish); t.classList.toggle('is-on', on); t.setAttribute('aria-pressed', on); SF.toast(on ? 'Guardado en favoritos ♥' : 'Quitado de favoritos', 'info'); }
+      else if (t.matches('[data-logout]')) { SF.auth.logout(); closeSettings(); SF.toast('Sesión cerrada'); }
+      else if (t.matches('[data-wipe]')) {
+        if (confirm('¿Borrar carrito, favoritos, sesión y preferencias guardados en este dispositivo? No se puede deshacer.')) {
+          Object.keys(localStorage).filter(k => k.startsWith('sfurban:')).forEach(k => localStorage.removeItem(k));
+          try { sessionStorage.clear(); } catch {} location.href = 'index.html#inicio'; location.reload();
+        }
+      }
+      else if (t.matches('[data-wish]')) { e.preventDefault(); const on = SF.wish.toggle(t.dataset.wish); t.classList.toggle('is-on', on); t.setAttribute('aria-pressed', on); SF.toast(on ? 'Guardado en favoritos ♥' : 'Quitado de favoritos', 'info', on ? { label: 'Ver', href: 'index.html#favoritos' } : null); }
     });
-    addEventListener('keydown', (e) => { if (e.key === 'Escape') SF.closeAll(); if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); SF.open('search'); search(''); } });
-    $('[data-search-input]').addEventListener('input', (e) => search(e.target.value));
+    document.addEventListener('change', (e) => {
+      const s = e.target.closest('[data-pref]'); if (!s) return;
+      pref.set(s.dataset.pref, s.checked); SF.applyPrefs();
+    });
+    addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { SF.closeAll(); $('[data-chat-panel]').hidden = true; }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); SF.goView('explorar'); }
+    });
     $$('[data-auth-form]').forEach(f => f.addEventListener('submit', onAuthSubmit));
 
     SF.cart.onChange(updateBadges); SF.auth.onChange(updateBadges);
-    // Texto gigante del footer: se ajusta al ancho exacto con cualquier tipografía
-    const fit = () => $$('[data-fit]').forEach(s => { s.style.fontSize = '100px'; const w = s.parentElement.clientWidth * 0.98; s.style.fontSize = (100 * w / s.offsetWidth) + 'px'; });
-    fit(); addEventListener('resize', fit); document.fonts && document.fonts.ready.then(fit);
-
-    updateBadges(); headerScroll(); SF.reveal();
+    updateBadges(); SF.reveal();
+    // Página que no es el inicio: marca en la barra la sección relacionada
+    if (!isHome()) setTimeout(() => SF.setDock(document.body.dataset.dock || ''), 0);
+    document.fonts && document.fonts.ready.then(() => SF.setDock($('[data-dock-item].is-on')?.dataset.dockItem || document.body.dataset.dock || ''));
+    addEventListener('resize', () => SF.setDock($('[data-dock-item].is-on')?.dataset.dockItem || ''));
     SF.track('page_view', { page: document.body.dataset.page });
   };
 })();

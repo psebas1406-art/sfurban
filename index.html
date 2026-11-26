@@ -24,41 +24,8 @@
 <body data-page="home">
 
 <main id="main" class="container app-enter" data-app>
-  <!-- Perfil -->
-  <section class="profile" aria-label="SF Urban">
-    <button class="avatar" data-story="drop" aria-label="Ver historia del Drop 01"><span class="avatar__in" data-iso></span></button>
-    <div class="profile__main">
-      <h1 class="profile__handle" data-handle>sfurban</h1>
-      <div class="profile__actions">
-        <button class="btn btn--accent btn--sm" data-follow>Seguir</button>
-        <button class="btn btn--ghost btn--sm" data-message>Mensaje</button>
-        <button class="btn btn--ghost btn--sm" data-share aria-label="Compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 10 14M21 4l-6.5 16-3.5-6.5L4.5 10z"/></svg></button>
-      </div>
-      <ul class="profile__stats" data-stats></ul>
-      <div class="profile__bio">
-        <strong>SF Urban</strong>
-        <span class="cat">Ropa · Women &amp; Men — Activewear</span><br>
-        <span class="serif">Dos letras, un solo movimiento.</span><br>
-        Drop 01 ya disponible 🔴 Envío gratis desde <span data-free></span><br>
-        <a href="#club" data-follow-link>Únete al club → acceso anticipado</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Historias destacadas -->
-  <section class="highlights" aria-label="Historias destacadas" data-highlights></section>
-
-  <!-- Apartados -->
-  <section aria-label="Contenido">
-    <div class="ig-tabs" role="tablist" data-tabs></div>
-    <div data-view></div>
-  </section>
+  <div data-view aria-live="polite"></div>
 </main>
-
-<!-- Ficha rápida (publicación) -->
-<div class="post-modal" data-post-modal aria-hidden="true" role="dialog" aria-modal="true" aria-label="Prenda"></div>
-<!-- Visor de historias -->
-<div class="story" data-story-viewer aria-hidden="true" role="dialog" aria-modal="true" aria-label="Historia"></div>
 
 <script src="layout.js"></script>
 <script src="intro.js"></script>

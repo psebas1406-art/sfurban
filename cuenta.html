@@ -2,25 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="theme-color" content="#0D0D0F">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Mi cuenta — SF Urban</title>
+  <title>Mi perfil — SF Urban</title>
   <meta name="robots" content="noindex">
-  <link rel="icon" href="isotipo.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="styles.css">
-  <script src="config.js"></script>
-  <script src="products.js"></script>
-  <script src="db.js"></script>
-  <script src="auth.js"></script>
-  <script src="cart.js"></script>
-  <script src="theme.js"></script>
+  <!-- La cuenta ahora vive en la vista "Perfil" de la barra flotante -->
+  <meta http-equiv="refresh" content="0; url=index.html#perfil">
+  <script>location.replace('index.html#perfil');</script>
 </head>
-<body data-page="account">
-<main id="main" class="container" data-account-page></main>
-<script src="layout.js"></script>
-<script src="account.js"></script>
+<body style="background:#0D0D0F;color:#F5F5F2;font-family:system-ui">
+  <p><a href="index.html#perfil" style="color:inherit">Ir a mi perfil</a></p>
 </body>
 </html>
