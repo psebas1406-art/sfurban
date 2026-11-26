@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="240 385 610 440" role="img" aria-label="SF Urban">
+  <!-- Isotipo SF: barra superior compartida, inclinación 12°, brazo de la F = triángulo play -->
+  <g fill="#F5F5F2">
+    <polygon points="338,395 897,395 880,479 321,479"/>
+    <polygon points="321,479 406,479 388,563 553,563 500,813 250,813 267,731 436,731 453,647 285,647"/>
+    <polygon points="628,479 713,479 641,813 558,813"/>
+  </g>
+  <polygon fill="#E4002B" points="697,556 838,604 677,653"/>
+</svg>

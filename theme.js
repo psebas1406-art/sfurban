@@ -6,12 +6,14 @@
    ========================================================= */
 (function () {
   const apply = () => {
-    const pal = SF.config.palettes[SF.db.kv.get('palette', SF.config.defaults.palette)] || SF.config.palettes[SF.config.defaults.palette];
-    const font = SF.config.fonts[SF.db.kv.get('font', SF.config.defaults.font)] || SF.config.fonts[SF.config.defaults.font];
+    const D = SF.config.defaults;
+    let pk = SF.db.kv.get('palette', D.palette); if (!SF.config.palettes[pk] || SF.config.showStylePanel === false) pk = D.palette;
+    let fk = SF.db.kv.get('font', D.font); if (!SF.config.fonts[fk] || SF.config.showStylePanel === false) fk = D.font;
+    const pal = SF.config.palettes[pk], font = SF.config.fonts[fk];
     const r = document.documentElement.style;
     Object.entries(pal.vars).forEach(([k, v]) => r.setProperty(k, v));
     r.setProperty('--f-display', font.display); r.setProperty('--f-body', font.body); r.setProperty('--f-serif', font.serif);
-    document.documentElement.dataset.font = SF.db.kv.get('font', SF.config.defaults.font);
+    document.documentElement.dataset.font = fk;
   };
   apply(); // antes de pintar, evita parpadeo
 

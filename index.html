@@ -3,17 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>SF Urban — Streetwear con alma retro</title>
-  <meta name="description" content="SF Urban: tienda virtual de ropa urbana. Drop 01 disponible. Streetwear con alma retro para la nueva generación.">
-  <meta name="theme-color" content="#0E0C0C">
+  <title>SF Urban — Women &amp; Men Activewear</title>
+  <meta name="description" content="SF Urban: ropa urbana y activewear para mujer y hombre. Drop 01 disponible.">
+  <meta name="theme-color" content="#0D0D0F">
   <meta property="og:title" content="SF Urban — Drop 01">
-  <meta property="og:description" content="Streetwear con alma retro.">
+  <meta property="og:description" content="Dos letras, un solo movimiento.">
   <meta property="og:image" content="drop01-conjunto-burdeos.png">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237A1E2C'/%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' dominant-baseline='middle' font-family='Arial Black' font-size='30' fill='%23EFE8DA'%3ESF%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="isotipo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&family=Syne:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="preload" as="image" href="drop01-conjunto-burdeos.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
   <script src="products.js"></script>
@@ -24,158 +23,45 @@
 </head>
 <body data-page="home">
 
-<main id="main">
-  <!-- ============ HERO: escenario → pantalla → carrusel ============ -->
-  <section class="hero" id="hero" aria-label="Drop 01">
-    <div class="hero__sticky">
-      <div class="hero__glow"></div>
-      <div class="hero__floor" aria-hidden="true"></div>
-
-      <div class="hero__intro" data-hero-intro>
-        <span class="eyebrow">Temporada 01 · Ya disponible</span>
-        <h1 class="display">Viste la <span class="serif">ciudad</span></h1>
+<main id="main" class="container app-enter" data-app>
+  <!-- Perfil -->
+  <section class="profile" aria-label="SF Urban">
+    <button class="avatar" data-story="drop" aria-label="Ver historia del Drop 01"><span class="avatar__in" data-iso></span></button>
+    <div class="profile__main">
+      <h1 class="profile__handle" data-handle>sfurban</h1>
+      <div class="profile__actions">
+        <button class="btn btn--accent btn--sm" data-follow>Seguir</button>
+        <button class="btn btn--ghost btn--sm" data-message>Mensaje</button>
+        <button class="btn btn--ghost btn--sm" data-share aria-label="Compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 10 14M21 4l-6.5 16-3.5-6.5L4.5 10z"/></svg></button>
       </div>
-
-      <div class="pillar" data-hero-pillar aria-hidden="true"></div>
-      <div class="pedestal" data-hero-pedestal aria-hidden="true">
-        <div class="pedestal__body"></div>
-        <div class="pedestal__ring"></div>
-        <div class="pedestal__top"></div>
-        <div class="pedestal__sweep"></div>
-      </div>
-
-      <div class="screen" data-hero-screen>
-        <div class="screen__chrome" aria-hidden="true">
-          <span class="logo"><span class="logo__sf">SF</span><span class="logo__urban">URBAN</span></span>
-          <nav><span>Inicio</span><span>Drop 01</span><span>Tienda</span><span>Club</span></nav>
-          <span class="pill">✦</span>
-        </div>
-        <div class="screen__view">
-          <div class="reel__big" data-reel-big aria-hidden="true">SF URBAN</div>
-          <div class="reel" data-reel></div>
-          <div class="screen__title">
-            <span class="eyebrow" data-reel-eyebrow>Nueva colección</span>
-            <h2 class="display"><span class="screen__name"><span data-reel-name1>Drop</span></span><span class="screen__name"><span data-reel-name2>01</span></span></h2>
-            <p class="muted" data-reel-desc>Paneles curvos, vivos contrastantes y silueta oversized. El primer drop de SF Urban.</p>
-            <a class="btn btn--accent" href="producto.html?id=p-0001" data-reel-cta>Ver prenda <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-          </div>
-          <div class="screen__meta"><strong data-reel-count>01</strong><span class="muted">/ <span data-reel-total>04</span></span></div>
-          <div class="screen__bar"><span data-reel-bar></span></div>
-        </div>
-      </div>
-
-      <div class="hero__hint" data-hero-hint><i></i>Desliza</div>
-    </div>
-  </section>
-
-  <!-- ============ Banda ============ -->
-  <div class="band" aria-hidden="true">
-    <div class="band__track" data-band>
-      <span>Drop 01</span><span class="star">✦</span><span class="serif">hecho para la calle</span><span class="star">✦</span><span>SF Urban</span><span class="star">✦</span><span>Edición limitada</span><span class="star">✦</span>
-      <span>Drop 01</span><span class="star">✦</span><span class="serif">hecho para la calle</span><span class="star">✦</span><span>SF Urban</span><span class="star">✦</span><span>Edición limitada</span><span class="star">✦</span>
-    </div>
-  </div>
-
-  <!-- ============ Qué hay dentro ============ -->
-  <section class="section" id="drop">
-    <div class="container">
-      <div class="section-head">
-        <div data-reveal>
-          <span class="eyebrow">Drop 01 · Conjunto Track</span>
-          <h2 class="display h-l">Qué hay <span class="serif">dentro</span></h2>
-        </div>
-        <p class="muted" data-reveal style="--d:.1s">Cada detalle pensado para verse bien y moverse mejor. Pasa por los puntos para conocer la prenda.</p>
-      </div>
-      <div class="inside" data-inside></div>
-      <div class="inside-cta" data-reveal>
-        <a class="btn btn--accent" href="producto.html?id=p-0001">Comprar ahora <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <a class="btn btn--ghost" href="#tienda">Ver toda la tienda</a>
+      <ul class="profile__stats" data-stats></ul>
+      <div class="profile__bio">
+        <strong>SF Urban</strong>
+        <span class="cat">Ropa · Women &amp; Men — Activewear</span><br>
+        <span class="serif">Dos letras, un solo movimiento.</span><br>
+        Drop 01 ya disponible 🔴 Envío gratis desde <span data-free></span><br>
+        <a href="#club" data-follow-link>Únete al club → acceso anticipado</a>
       </div>
     </div>
   </section>
 
-  <!-- ============ Tienda ============ -->
-  <section class="section section--alt" id="tienda">
-    <div class="container">
-      <div class="section-head">
-        <div data-reveal>
-          <span class="eyebrow">Tienda</span>
-          <h2 class="display h-l">El <span class="serif">catálogo</span></h2>
-        </div>
-        <p class="muted" data-reveal style="--d:.1s">Estamos llenando el perchero. Activa “Avísame” en los espacios reservados y serás de los primeros en saberlo.</p>
-      </div>
-      <div class="toolbar" data-reveal>
-        <div class="chips" data-filter-cats></div>
-        <span class="spacer"></span>
-        <select class="select" data-sort aria-label="Ordenar">
-          <option value="new">Más recientes</option>
-          <option value="price-asc">Precio: menor a mayor</option>
-          <option value="price-desc">Precio: mayor a menor</option>
-        </select>
-      </div>
-      <div class="grid" data-grid></div>
-    </div>
-  </section>
+  <!-- Historias destacadas -->
+  <section class="highlights" aria-label="Historias destacadas" data-highlights></section>
 
-  <!-- ============ Categorías ============ -->
-  <section class="section" id="categorias">
-    <div class="container">
-      <div class="section-head">
-        <div data-reveal>
-          <span class="eyebrow">Explora</span>
-          <h2 class="display h-l">Categorías</h2>
-        </div>
-      </div>
-      <div class="bento" data-reveal>
-        <a href="#tienda" data-cat-link="conjuntos" class="tile tile--a"><span class="count">1 prenda</span><h3>Conjuntos</h3><img src="drop01-conjunto-burdeos.png" alt="" loading="lazy"><span class="arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
-        <a href="#tienda" data-cat-link="chaquetas" class="tile tile--b"><span class="count">Próximamente</span><h3>Chaquetas</h3><span class="arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
-        <a href="#tienda" data-cat-link="camisetas" class="tile tile--c"><span class="count">Próximamente</span><h3>Camisetas</h3><span class="arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
-        <a href="#tienda" data-cat-link="buzos" class="tile tile--d"><span class="count">Próximamente</span><h3>Buzos</h3><span class="arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
-        <a href="#tienda" data-cat-link="accesorios" class="tile tile--e tile--c"><span class="count">Próximamente</span><h3>Accesorios</h3><span class="arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ Nosotros ============ -->
-  <section class="section section--dark" id="nosotros">
-    <div class="container">
-      <span class="eyebrow" style="color:var(--on-stage)">Nosotros</span>
-      <p class="manifesto mt-1" data-manifesto>Somos dos personas con una idea fija: que la ropa urbana tenga <span class="serif">memoria</span> y actitud. Tomamos lo mejor de lo retro y lo cortamos para hoy.</p>
-      <div class="stats">
-        <div data-reveal><strong>01</strong>Drop lanzado</div>
-        <div data-reveal style="--d:.1s"><strong>100%</strong>Diseño propio</div>
-        <div data-reveal style="--d:.2s"><strong>∞</strong>Ganas de calle</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ Club ============ -->
-  <section class="section" id="club">
-    <div class="container">
-      <div class="club" data-reveal>
-        <div>
-          <span class="eyebrow" style="color:var(--bg)">SF Club</span>
-          <h2 class="display h-m mt-1">Entra antes <span class="serif">que nadie</span></h2>
-          <ul>
-            <li>Acceso anticipado a cada drop</li>
-            <li>Descuento de bienvenida en tu primera compra</li>
-            <li>Guarda favoritos y sigue tus pedidos</li>
-          </ul>
-        </div>
-        <div class="club__form">
-          <button class="btn btn--accent btn--block" data-club-register>Crear mi cuenta gratis</button>
-          <p class="muted" style="color:color-mix(in srgb,var(--bg) 60%,transparent);text-align:center;margin:4px 0">o solo recibe novedades</p>
-          <form class="inline-field" data-newsletter>
-            <input type="email" name="email" placeholder="tu@correo.com" aria-label="Correo para novedades" required>
-            <button class="btn btn--sm">Suscribirme</button>
-          </form>
-        </div>
-      </div>
-    </div>
+  <!-- Apartados -->
+  <section aria-label="Contenido">
+    <div class="ig-tabs" role="tablist" data-tabs></div>
+    <div data-view></div>
   </section>
 </main>
 
+<!-- Ficha rápida (publicación) -->
+<div class="post-modal" data-post-modal aria-hidden="true" role="dialog" aria-modal="true" aria-label="Prenda"></div>
+<!-- Visor de historias -->
+<div class="story" data-story-viewer aria-hidden="true" role="dialog" aria-modal="true" aria-label="Historia"></div>
+
 <script src="layout.js"></script>
+<script src="intro.js"></script>
 <script src="home.js"></script>
 </body>
 </html>

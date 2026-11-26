@@ -1,6 +1,6 @@
 /* =========================================================
    SF URBAN — Configuración central
-   Todo lo "de marca" vive aquí: nombre, moneda, paletas,
+   Todo lo "de marca" vive aquí: nombre, moneda, paleta,
    tipografías, contacto. Cambiar aquí = cambia en todo el sitio.
    ========================================================= */
 window.SF = window.SF || {};
@@ -8,47 +8,50 @@ window.SF = window.SF || {};
 SF.config = {
   brand: {
     name: 'SF Urban',
-    tagline: 'Streetwear con alma retro',
+    handle: 'sfurban',
+    tagline: 'Women & Men — Activewear',
+    motto: 'Dos letras, un solo movimiento.',
     email: 'hola@sfurban.com',          // TODO: correo real
     whatsapp: '',                        // TODO: número con indicativo, ej. 573001234567
     instagram: 'https://instagram.com/', // TODO
     tiktok: 'https://tiktok.com/',       // TODO
   },
 
+  // Intro en video al entrar (una vez por visita). ?intro=1 la fuerza.
+  intro: { enabled: true, video: 'sf-urban-intro-web.mp4' },
+
   // Moneda / formato de precios (TODO: confirmar país)
   currency: { code: 'COP', locale: 'es-CO', decimals: 0 },
 
   shipping: { flat: 15000, freeFrom: 250000 },
 
-  // Paletas basadas en la regla 60-30-10 (video de referencia).
-  // 60 = base/fondo · 30 = contraste/tinta · 10 = acento
+  // Paleta oficial (manual de marca, lámina 04).
+  // Proporción: 60 negro · 20 blanco · 12 rojo · 5 grafito · 3 gris. Rojo nunca > 15 %.
   palettes: {
-    burdeos: {
-      label: 'Marfil · Negro piano · Burdeos', note: 'Retro elegante, nace de la prenda',
-      vars: { '--bg': '#EFE8DA', '--bg-2': '#E6DDCB', '--surface': '#F7F3EA', '--ink': '#141212', '--ink-soft': '#5B5550', '--line': 'rgba(20,18,18,.14)', '--accent': '#7A1E2C', '--accent-2': '#B23A48', '--on-accent': '#F7F3EA', '--stage': '#0E0C0C', '--on-stage': '#F2ECE1' },
-    },
-    turquesa: {
-      label: 'Marfil antiguo · Negro piano · Turquesa surf', note: 'Vintage con un toque fresco',
-      vars: { '--bg': '#ECE5D3', '--bg-2': '#E1D8C2', '--surface': '#F6F1E6', '--ink': '#111111', '--ink-soft': '#55524B', '--line': 'rgba(17,17,17,.14)', '--accent': '#16A99B', '--accent-2': '#2EC4B6', '--on-accent': '#0B0B0B', '--stage': '#0B0D0D', '--on-stage': '#EEF2EE' },
-    },
-    zafiro: {
-      label: 'Zafiro profundo · Blanco perla · Naranja brasa', note: 'Deportivo, enérgico',
-      vars: { '--bg': '#F3F1EC', '--bg-2': '#E7E4DC', '--surface': '#FFFFFF', '--ink': '#0F1C3F', '--ink-soft': '#4A5578', '--line': 'rgba(15,28,63,.15)', '--accent': '#F0641E', '--accent-2': '#FF8A4C', '--on-accent': '#FFFFFF', '--stage': '#0F1C3F', '--on-stage': '#F3F1EC' },
-    },
-    pop: {
-      label: 'Amarillo laca · Negro ónix · Rosa fucsia', note: 'Pop art, muy Gen Z',
-      vars: { '--bg': '#F4CB16', '--bg-2': '#EBBE00', '--surface': '#FFE25A', '--ink': '#0D0D0D', '--ink-soft': '#3B3510', '--line': 'rgba(13,13,13,.2)', '--accent': '#FF2E88', '--accent-2': '#FF66A8', '--on-accent': '#FFFFFF', '--stage': '#0D0D0D', '--on-stage': '#F4CB16' },
+    oficial: {
+      label: 'Oficial · Negro carbón · Rojo competición · Blanco hielo', note: 'Manual de marca',
+      vars: {
+        '--bg': '#0D0D0F',        // Negro carbón
+        '--bg-2': '#141417',
+        '--surface': '#1B1C1F',
+        '--surface-2': '#2B2D31', // Grafito
+        '--ink': '#F5F5F2',       // Blanco hielo
+        '--ink-soft': '#8C8C87',  // Gris acero
+        '--line': 'rgba(245,245,242,.12)',
+        '--accent': '#E4002B',    // Rojo competición
+        '--accent-2': '#FF1F45',
+        '--on-accent': '#F5F5F2',
+        '--stage': '#0D0D0F', '--on-stage': '#F5F5F2',
+      },
     },
   },
 
-  // Parejas tipográficas (cargadas desde Google Fonts en el <head>)
   fonts: {
-    urbano:  { label: 'Urbano — Unbounded + Space Grotesk', display: "'Unbounded', 'Arial Black', sans-serif", body: "'Space Grotesk', system-ui, sans-serif", serif: "'Instrument Serif', Georgia, serif" },
-    retro:   { label: 'Retro — Bebas Neue + DM Sans', display: "'Bebas Neue', Impact, sans-serif", body: "'DM Sans', system-ui, sans-serif", serif: "'DM Serif Display', Georgia, serif" },
-    minimal: { label: 'Minimal — Syne + Inter', display: "'Syne', 'Arial Black', sans-serif", body: "'Inter', system-ui, sans-serif", serif: "'Instrument Serif', Georgia, serif" },
+    oficial: { label: 'Oficial — Unbounded + Instrument Serif + Inter', display: "'Unbounded', 'Arial Black', sans-serif", body: "'Inter', system-ui, sans-serif", serif: "'Instrument Serif', Georgia, serif" },
   },
 
-  defaults: { palette: 'burdeos', font: 'urbano' },
+  defaults: { palette: 'oficial', font: 'oficial' },
+  showStylePanel: false,
 };
 
 SF.money = (n) => new Intl.NumberFormat(SF.config.currency.locale, {

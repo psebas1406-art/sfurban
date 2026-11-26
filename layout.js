@@ -19,35 +19,36 @@
     close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
     chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5z"/></svg>',
     arrow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+    home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5.5v-5.5h-5V20H4z"/></svg>',
+    grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M9.33 4v16M14.67 4v16M4 9.33h16M4 14.67h16"/></svg>',
+    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg>',
+    bookmark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4.5L6 20z"/></svg>',
+    info: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg>',
+    share: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 10 14M21 4l-6.5 16-3.5-6.5L4.5 10z"/></svg>',
+    soundOn: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+    soundOff: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="m17 9.5 5 5M22 9.5l-5 5"/></svg>',
   };
   SF.icon = icon;
 
-  const logo = `<a href="index.html" class="logo" aria-label="SF Urban, inicio"><span class="logo__sf">SF</span><span class="logo__urban">URBAN</span></a>`;
+  /* ---------- Logo oficial (isotipo SF + "Urban" + sudadera) ---------- */
+  SF.isoSVG = `<svg class="brand__iso" viewBox="240 385 610 440" aria-hidden="true"><g fill="#F5F5F2"><polygon points="338,395 897,395 880,479 321,479"/><polygon points="321,479 406,479 388,563 553,563 500,813 250,813 267,731 436,731 453,647 285,647"/><polygon points="628,479 713,479 641,813 558,813"/></g><polygon fill="#E4002B" points="697,556 838,604 677,653"/></svg>`;
+  const hoodSVG = `<svg class="brand__hood" viewBox="0 0 100 112" aria-hidden="true"><path fill="#E4002B" d="M50 4c11 0 19 8 19 18v4l15 7 12 40-11 3-5-18v52H20V58l-5 18-11-3 12-40 15-7v-4C31 12 39 4 50 4z"/><path fill="none" stroke="#0D0D0F" stroke-width="4" d="M41 20c0-6 4-9 9-9s9 3 9 9-4 9-9 9-9-3-9-9zM46 29v14M54 29v14M33 76h34l3 20H30z"/></svg>`;
+  SF.brandMark = (cls = '') => `<span class="brand ${cls}">${SF.isoSVG}<span class="brand__word">Urban</span>${hoodSVG}</span>`;
+  const logo = `<a href="index.html" class="logo" aria-label="SF Urban, inicio" data-header-logo>${SF.brandMark()}</a>`;
   SF.logo = logo;
 
   function header() {
     return `
-    <div class="announce" role="region" aria-label="Anuncios">
-      <div class="announce__track">
-        ${Array(2).fill(`<span>Envío gratis desde ${SF.money(SF.config.shipping.freeFrom)}</span><span>✦</span><span>Drop 01 ya disponible</span><span>✦</span><span>Regístrate y recibe acceso anticipado</span><span>✦</span><span>Hecho para la calle</span><span>✦</span>`).join('')}
-      </div>
-    </div>
     <header class="site-header" id="siteHeader">
       <div class="site-header__inner">
-        <button class="icon-btn only-mobile" data-open="menu" aria-label="Abrir menú">${icon.menu}</button>
-        ${logo}
-        <nav class="main-nav" aria-label="Principal">
-          <a href="index.html#drop">Drop 01</a>
-          <a href="index.html#tienda">Tienda</a>
-          <a href="index.html#categorias">Categorías</a>
-          <a href="index.html#nosotros">Nosotros</a>
+        <nav class="header-actions" aria-label="Acciones">
+          <a class="icon-btn hide-mobile" href="index.html" aria-label="Inicio">${icon.home}<span class="lbl">Inicio</span></a>
+          <button class="icon-btn" data-open="search" aria-label="Buscar">${icon.search}<span class="lbl">Buscar</span></button>
+          <a class="icon-btn hide-mobile" href="cuenta.html#favoritos" aria-label="Favoritos">${icon.heart}<span class="lbl">Favoritos</span><span class="badge" data-wish-count hidden>0</span></a>
+          <button class="icon-btn hide-mobile" data-account aria-label="Mi cuenta">${icon.user}<span class="lbl">Cuenta</span><span class="dot" data-user-dot hidden></span></button>
+          <button class="icon-btn" data-open="cart" aria-label="Bolsa">${icon.bag}<span class="lbl">Bolsa</span><span class="badge" data-cart-count hidden>0</span></button>
         </nav>
-        <div class="header-actions">
-          <button class="icon-btn" data-open="search" aria-label="Buscar">${icon.search}</button>
-          <button class="icon-btn" data-account aria-label="Mi cuenta">${icon.user}<span class="dot" data-user-dot hidden></span></button>
-          <a class="icon-btn hide-mobile" href="cuenta.html#favoritos" aria-label="Favoritos">${icon.heart}<span class="badge" data-wish-count hidden>0</span></a>
-          <button class="icon-btn" data-open="cart" aria-label="Carrito">${icon.bag}<span class="badge" data-cart-count hidden>0</span></button>
-        </div>
+        ${logo}
       </div>
     </header>`;
   }
@@ -56,34 +57,27 @@
     const b = SF.config.brand;
     return `
     <footer class="site-footer">
-      <div class="container">
-        <div class="footer-big" aria-hidden="true"><span data-fit>SF URBAN</span></div>
-        <div class="footer-grid">
-          <div>
-            ${logo}
-            <p class="muted mt-1">${esc(b.tagline)}. Ropa para quienes visten la ciudad a su manera.</p>
-          </div>
-          <div><h4>Tienda</h4><a href="index.html#tienda">Todo</a><a href="index.html#drop">Drop 01</a><a href="index.html#categorias">Categorías</a></div>
-          <div><h4>Ayuda</h4><a href="#" data-soon="Guía de tallas">Guía de tallas</a><a href="#" data-soon="Envíos y devoluciones">Envíos y devoluciones</a><a href="mailto:${esc(b.email)}">Contacto</a></div>
-          <div><h4>Síguenos</h4><a href="${esc(b.instagram)}" target="_blank" rel="noopener">Instagram</a><a href="${esc(b.tiktok)}" target="_blank" rel="noopener">TikTok</a></div>
-        </div>
-        <div class="footer-bottom"><span>© ${new Date().getFullYear()} ${esc(b.name)}. Todos los derechos reservados.</span><span><a href="#" data-soon="Términos">Términos</a> · <a href="#" data-soon="Privacidad">Privacidad</a></span></div>
-      </div>
-    </footer>`;
+      <nav class="footer-links">
+        <a href="index.html#tienda">Tienda</a><a href="index.html#nosotros">Nosotros</a>
+        <a href="#" data-soon="Guía de tallas">Tallas</a><a href="#" data-soon="Envíos y devoluciones">Envíos</a>
+        <a href="mailto:${esc(b.email)}">Contacto</a><a href="${esc(b.instagram)}" target="_blank" rel="noopener">Instagram</a>
+        <a href="${esc(b.tiktok)}" target="_blank" rel="noopener">TikTok</a><a href="#" data-soon="Términos">Términos</a><a href="#" data-soon="Privacidad">Privacidad</a>
+        <a href="index.html?intro=1">Ver intro</a>
+      </nav>
+      <p>© ${new Date().getFullYear()} ${esc(b.name)} · <span class="serif">${esc(b.motto)}</span></p>
+    </footer>
+    <nav class="bottom-nav" aria-label="Navegación">
+      <a href="index.html" aria-label="Inicio">${icon.home}</a>
+      <button data-open="search" aria-label="Buscar">${icon.search}</button>
+      <button data-open="cart" aria-label="Bolsa">${icon.bag}<span class="badge" data-cart-count hidden>0</span></button>
+      <a href="cuenta.html#favoritos" aria-label="Favoritos">${icon.heart}<span class="badge" data-wish-count hidden>0</span></a>
+      <button data-account aria-label="Mi cuenta">${icon.user}<span class="dot" data-user-dot hidden></span></button>
+    </nav>`;
   }
 
   function overlays() {
     return `
     <div class="scrim" data-scrim hidden></div>
-
-    <aside class="drawer drawer--left" id="menuDrawer" aria-label="Menú" aria-hidden="true">
-      <div class="drawer__head">${logo}<button class="icon-btn" data-close aria-label="Cerrar">${icon.close}</button></div>
-      <nav class="mobile-nav">
-        <a href="index.html#drop" data-close>Drop 01</a><a href="index.html#tienda" data-close>Tienda</a>
-        <a href="index.html#categorias" data-close>Categorías</a><a href="index.html#nosotros" data-close>Nosotros</a>
-        <a href="cuenta.html">Mi cuenta</a><a href="cuenta.html#favoritos">Favoritos</a>
-      </nav>
-    </aside>
 
     <aside class="drawer drawer--right" id="cartDrawer" aria-label="Carrito" aria-hidden="true">
       <div class="drawer__head"><h3>Tu bolsa <span class="muted" data-cart-count-text></span></h3><button class="icon-btn" data-close aria-label="Cerrar">${icon.close}</button></div>
@@ -101,7 +95,7 @@
     <div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-hidden="true">
       <div class="modal__card">
         <button class="icon-btn modal__x" data-close aria-label="Cerrar">${icon.close}</button>
-        <div class="auth-side" aria-hidden="true"><div class="auth-side__txt">Únete al<br><em>club</em></div><img src="drop01-conjunto-burdeos.png" alt=""></div>
+        <div class="auth-side" aria-hidden="true">${SF.isoSVG}<div class="auth-side__txt">Únete al <em>club</em></div><p>Acceso anticipado a cada drop, favoritos y seguimiento de pedidos.</p></div>
         <div class="auth-main">
           <div class="tabs" role="tablist">
             <button role="tab" class="tab is-active" data-auth-tab="login">Iniciar sesión</button>
@@ -141,9 +135,8 @@
 
     <div class="toasts" aria-live="polite" data-toasts></div>
 
-    <button class="chat-fab" data-chat aria-label="Chatea con nosotros">${icon.chat}<span>¿Te ayudamos?</span></button>
     <div class="chat-panel" data-chat-panel hidden>
-      <div class="chat-panel__head"><strong>SF Urban</strong><span class="muted">Responde en minutos</span><button class="icon-btn" data-chat-close aria-label="Cerrar">${icon.close}</button></div>
+      <div class="chat-panel__head"><strong>${esc(SF.config.brand.handle)}</strong><span class="muted">Responde en minutos</span><button class="icon-btn" data-chat-close aria-label="Cerrar">${icon.close}</button></div>
       <div class="chat-panel__body">
         <div class="bubble">¡Hola! 👋 Pronto tendremos asistente en línea y WhatsApp. Mientras tanto, ¿en qué te ayudamos?</div>
         <div class="chips"><button data-soon="Asistente de tallas">Guía de tallas</button><button data-soon="Seguimiento de pedidos">Mi pedido</button><button data-soon="WhatsApp">Hablar por WhatsApp</button></div>
