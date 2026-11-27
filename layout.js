@@ -65,7 +65,10 @@
     return `
     <header class="site-header" id="siteHeader">
       <div class="site-header__inner">
-        <button class="gear-btn" data-settings aria-label="Ajustes" aria-expanded="false" aria-controls="settingsPanel">${icon.gear}</button>
+        <div class="header-left">
+          <button class="gear-btn" data-settings aria-label="Ajustes" aria-expanded="false" aria-controls="settingsPanel">${icon.gear}</button>
+          <button class="chat-btn" data-chat aria-label="Asistente de SF Urban">${icon.chat}<span>Asistente</span></button>
+        </div>
         ${SF.logo}
       </div>
     </header>`;
@@ -202,13 +205,7 @@
 
     <div class="toasts" aria-live="polite" data-toasts></div>
 
-    <div class="chat-panel" data-chat-panel hidden>
-      <div class="chat-panel__head"><strong>${esc(SF.config.brand.handle)}</strong><span class="muted">Responde en minutos</span><button class="icon-btn" data-chat-close aria-label="Cerrar">${icon.close}</button></div>
-      <div class="chat-panel__body">
-        <div class="bubble">¡Hola! 👋 Pronto tendremos asistente en línea y WhatsApp. Mientras tanto, ¿en qué te ayudamos?</div>
-        <div class="chips"><button data-soon="Asistente de tallas">Guía de tallas</button><button data-soon="Seguimiento de pedidos">Mi pedido</button><button data-soon="WhatsApp">Hablar por WhatsApp</button></div>
-      </div>
-    </div>`;
+    ${SF.chat ? SF.chat.markup() : ''}`;
   }
 
   /* ---------- Toasts (con acción opcional) ---------- */
@@ -308,8 +305,8 @@
       else if (t.matches('.qty [data-q]')) { const [id, size] = t.closest('[data-line]').dataset.line.split('|'); const l = SF.cart.items().find(i => i.productId === id && i.size === size); SF.cart.setQty(id, size, l.qty + +t.dataset.q); }
       else if (t.matches('[data-rm]')) { const [id, size] = t.dataset.rm.split('|'); SF.cart.remove(id, size); }
       else if (t.matches('[data-soon]')) { e.preventDefault(); SF.toast(`${t.dataset.soon}: disponible muy pronto ✦`, 'info'); }
-      else if (t.matches('[data-chat]')) { closeSettings(); const p = $('[data-chat-panel]'); p.hidden = !p.hidden; SF.track('chat_open'); }
-      else if (t.matches('[data-chat-close]')) { $('[data-chat-panel]').hidden = true; }
+      else if (t.matches('[data-chat]')) { closeSettings(); SF.chat && SF.chat.toggle(); }
+      else if (t.matches('[data-chat-close]')) { SF.chat && SF.chat.close(); }
       else if (t.matches('[data-logout]')) { SF.auth.logout(); closeSettings(); SF.toast('Sesión cerrada'); }
       else if (t.matches('[data-wipe]')) {
         if (confirm('¿Borrar carrito, favoritos, sesión y preferencias guardados en este dispositivo? No se puede deshacer.')) {
@@ -324,10 +321,11 @@
       pref.set(s.dataset.pref, s.checked); SF.applyPrefs();
     });
     addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { SF.closeAll(); $('[data-chat-panel]').hidden = true; }
+      if (e.key === 'Escape') { SF.closeAll(); SF.chat && SF.chat.close(); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); SF.goView('explorar'); }
     });
     $$('[data-auth-form]').forEach(f => f.addEventListener('submit', onAuthSubmit));
+    if (SF.chat) SF.chat.bind();
 
     SF.cart.onChange(updateBadges); SF.auth.onChange(updateBadges);
     updateBadges(); SF.reveal();

@@ -12,10 +12,13 @@ SF.config = {
     tagline: 'Women & Men — Activewear',
     motto: 'Dos letras, un solo movimiento.',
     email: 'psebas.1406@gmail.com',     // correo de contacto (aparece en la web y en la política de privacidad)
-    whatsapp: '',                        // TODO: número con indicativo, ej. 573001234567
+    whatsapp: '',                        // número para "Hablar por WhatsApp" (con indicativo, sin +), ej. 573001234567. Vacío = se oculta el botón
     instagram: 'https://instagram.com/', // TODO
     tiktok: 'https://tiktok.com/',       // TODO
   },
+
+  // Asistente de IA (servidor en Render). El chat de la web le habla a {agentUrl}/chat
+  agentUrl: 'https://sfurban-agente.onrender.com',
 
   // Intro en video al entrar (una vez por visita). ?intro=1 la fuerza.
   intro: { enabled: true, video: 'sf-urban-intro-web.mp4' },
