@@ -24,6 +24,40 @@
     const t = $('[data-toast]'); t.textContent = msg; t.classList.toggle('is-err', !!err); t.hidden = false;
     clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, err ? 6000 : 2600);
   }
+  /* Ventana de confirmación propia. Reemplaza al confirm() del navegador, que algunos
+     celulares y navegadores dentro de apps (Instagram, WhatsApp…) bloquean sin avisar. */
+  function ask(message, okLabel = 'Aceptar', danger = false) {
+    return new Promise((resolve) => {
+      const m = document.createElement('div');
+      m.className = 'ask';
+      m.innerHTML = `<div class="ask__box" role="alertdialog" aria-modal="true">
+        <p>${esc(message).replace(/\n/g, '<br>')}</p>
+        <div class="ask__btns"><button class="btn btn--ghost" data-no>Cancelar</button><button class="btn ${danger ? 'btn--danger-solid' : 'btn--accent'}" data-yes>${esc(okLabel)}</button></div>
+      </div>`;
+      document.body.appendChild(m);
+      const done = (v) => { m.remove(); removeEventListener('keydown', onKey); resolve(v); };
+      const onKey = (e) => { if (e.key === 'Escape') done(false); };
+      addEventListener('keydown', onKey);
+      m.addEventListener('click', (e) => {
+        if (e.target.closest('[data-yes]')) done(true);
+        else if (e.target.closest('[data-no]') || e.target === m) done(false);
+      });
+      setTimeout(() => m.querySelector('[data-yes]').focus(), 30);
+    });
+  }
+
+  // Elimina una prenda y confirma con la base de datos que de verdad se borró
+  async function deleteProduct(p) {
+    if (!(await ask(`¿Eliminar "${p.name}" para siempre?\n\nSi solo quieres ocultarla de la tienda, cambia su estado a "Archivada".`, 'Eliminar', true))) return false;
+    try {
+      const gone = await api(`products?id=eq.${encodeURIComponent(p.id)}`, { method: 'DELETE', prefer: 'return=representation' });
+      if (!gone || !gone.length) throw new Error('No se pudo eliminar: la prenda ya no existe o tu usuario no tiene permiso.');
+      st.products = st.products.filter(x => x.id !== p.id);
+      toast(`"${p.name}" eliminada ✓`); render();
+      return true;
+    } catch (ex) { toast(ex.message, true); return false; }
+  }
+
   const STATUS = { active: 'Publicada', coming_soon: 'Próximamente', draft: 'Borrador (oculta)', archived: 'Archivada (oculta)' };
   const ORDER_STATUS = { pending_payment: 'Pendiente de pago', paid: 'Pagado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado', refunded: 'Reembolsado' };
 
@@ -119,7 +153,7 @@
   const TABS = [['resumen', 'Resumen'], ['ventas', 'Ventas'], ['inventario', 'Inventario'], ['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ['consentimientos', 'Consentimientos']];
   const st = {
     tab: (location.hash.slice(1) && TABS.some(t => t[0] === location.hash.slice(1))) ? location.hash.slice(1) : 'resumen',
-    products: [], categories: [], orders: [], consents: [], customers: [], admins: [], events: [],
+    products: [], categories: [], orders: [], consents: [], customers: [], admins: [], events: [], accounts: [],
     q: '', loaded: false, period: 'dia', metric: 'dinero', orderFilter: 'todos', table: false,
   };
 
@@ -165,7 +199,7 @@
     if (force && v) v.insertAdjacentHTML('afterbegin', '<p class="muted small" data-loading><span class="spin"></span> Actualizando…</p>');
     try {
       const since = new Date(Date.now() - 90 * 864e5).toISOString();
-      [st.products, st.categories, st.orders, st.customers, st.admins, st.consents, st.events] = await Promise.all([
+      [st.products, st.categories, st.orders, st.customers, st.admins, st.consents, st.events, st.accounts] = await Promise.all([
         api('products?select=*&order=sort.asc,created_at.asc'),
         api('categories?select=*&order=sort.asc'),
         api('orders?select=*&order=created_at.desc&limit=2000'),
@@ -173,6 +207,7 @@
         api('admins?select=email').catch(() => []),
         api('consent_records?select=*&order=server_ts.desc&limit=1000'),
         api(`events?select=type,user_id,anon_id,path,data,created_at&created_at=gte.${since}&order=created_at.desc&limit=10000`).catch(() => []),
+        api('account_activity?select=*&order=created_at.desc&limit=1000').catch(() => []),
       ]);
       st.loaded = true;
       render();
@@ -194,6 +229,31 @@
   const units = (o) => (o.items || []).reduce((a, i) => a + (+i.qty || 0), 0);
   const adminEmails = () => new Set(st.admins.map(a => a.email));
   const realCustomers = () => st.customers.filter(c => !adminEmails().has(c.email));
+  const isAdminEmail = (email) => adminEmails().has(email);
+  // Nombre a mostrar: el que escribió al registrarse o, si no hay, la primera parte del correo
+  const displayName = (c) => (c?.name || '').trim() || (c?.email ? c.email.split('@')[0] : '(sin nombre)');
+
+  /* ---------- Movimientos de cuentas (registro de seguridad, siempre activo) ---------- */
+  const ACCOUNT_ACTION = {
+    signup: ['✚', 'Creó su cuenta'],
+    email_confirmed: ['✉', 'Confirmó su correo'],
+    login: ['→', 'Inició sesión'],
+    password_reset_requested: ['?', 'Pidió recuperar la contraseña'],
+    password_changed: ['🔑', 'Cambió su contraseña'],
+    account_deleted: ['✕', 'Eliminó su cuenta'],
+  };
+  function accountList(rows, { withWho = true } = {}) {
+    if (!rows.length) return '<p class="muted small" style="margin:0">Aún no hay movimientos.</p>';
+    return `<ul class="acts">${rows.map(a => {
+      const [ic, label] = ACCOUNT_ACTION[a.action] || ['•', a.action];
+      const c = st.customers.find(x => x.id === a.user_id);
+      const name = displayName(c || { name: a.name, email: a.email });
+      const who = withWho
+        ? `<b>${c ? `<button class="linkbtn" style="padding:0" data-customer="${esc(c.id)}">${esc(name)}</button>` : esc(name)}${isAdminEmail(a.email) ? '<span class="tag-admin">Admin</span>' : ''}</b><span class="muted small">${esc(label)} · ${esc(a.email || '')}</span>`
+        : `<b>${esc(label)}</b>`;
+      return `<li><span class="acts__ic" aria-hidden="true">${ic}</span><span class="acts__who">${who}</span><time>${date(a.created_at)}</time></li>`;
+    }).join('')}</ul>`;
+  }
   const day = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
   const fmtDay = (d) => `${d.getDate()} ${d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '')}`;
   const compact = (n) => n >= 1e6 ? `$${(n / 1e6).toLocaleString('es-CO', { maximumFractionDigits: 1 })} M` : n >= 1e3 ? `$${Math.round(n / 1e3)} mil` : `$${n}`;
@@ -322,6 +382,10 @@
       </section>
     </div>
     <section class="card">
+      <div class="card__head"><h2>Movimientos de cuentas</h2><button class="btn btn--sm btn--ghost" data-goto="clientes">Clientes</button></div>
+      ${accountList(st.accounts.slice(0, 8))}
+    </section>
+    <section class="card">
       <div class="card__head"><h2>Últimos pedidos</h2><button class="btn btn--sm btn--ghost" data-goto="pedidos">Ver todos</button></div>
       ${st.orders.length ? `<ul class="list">${st.orders.slice(0, 6).map(o => `<li><span><b>${esc(o.number)}</b> · ${esc(o.customer?.name || '')} <span class="muted small">${date(o.created_at)}</span></span><span><span class="chip chip--o-${o.status}">${ORDER_STATUS[o.status]}</span> ${money(o.total)}</span></li>`).join('')}</ul>` : '<p class="muted small">Aún no hay pedidos.</p>'}
     </section>`;
@@ -371,26 +435,31 @@
   function clientes() {
     const q = st.q.toLowerCase();
     const cust = realCustomers();
-    const list = cust.filter(c => !q || [c.name, c.email, c.phone].join(' ').toLowerCase().includes(q));
+    // En la lista salen TODAS las cuentas (también las de ustedes, marcadas como Admin)
+    const list = st.customers.filter(c => !q || [c.name, c.email, c.phone].join(' ').toLowerCase().includes(q));
     const d30 = Date.now() - 30 * 864e5;
     return `
     <div class="kpis">
-      ${kpi('Clientes con cuenta', cust.length)}
+      ${kpi('Clientes con cuenta', cust.length, `${st.customers.length - cust.length} cuenta${st.customers.length - cust.length === 1 ? '' : 's'} de administrador aparte`)}
       ${kpi('Iniciaron sesión (30 días)', cust.filter(c => c.last_login_at && new Date(c.last_login_at) >= d30).length)}
       ${kpi('Con al menos una compra', cust.filter(c => st.orders.some(o => o.user_id === c.id && isPaid(o))).length)}
       ${kpi('Aceptan publicidad', cust.filter(c => c.marketing).length)}
     </div>
+    <section class="card">
+      <div class="card__head"><h2>Movimientos de cuentas</h2><span class="muted small">Registros, inicios de sesión y cambios de contraseña</span></div>
+      ${accountList(st.accounts.slice(0, 40))}
+    </section>
     <div class="bar"><input class="input" type="search" placeholder="Buscar por nombre, correo o celular…" value="${esc(st.q)}" data-q></div>
     ${list.length ? `<div class="clist">${list.map(c => {
       const s = customerStats(c);
       return `<button class="crow" data-customer="${esc(c.id)}">
-        <span class="crow__avatar">${esc((c.name || c.email || '?').trim().charAt(0).toUpperCase())}</span>
-        <span class="crow__main"><b>${esc(c.name || '(sin nombre)')}</b><span class="muted small">${esc(c.email)}</span></span>
+        <span class="crow__avatar">${esc(displayName(c).charAt(0).toUpperCase())}</span>
+        <span class="crow__main"><b>${esc(displayName(c))}${isAdminEmail(c.email) ? '<span class="tag-admin">Admin</span>' : ''}</b><span class="muted small">${esc(c.email)} · ${c.last_login_at ? 'último inicio ' + date(c.last_login_at) : 'creada ' + date(c.created_at)}</span></span>
         <span class="crow__stat"><b>${s.paid.length}</b><span class="muted small">compras</span></span>
         <span class="crow__stat"><b>${money(s.spent)}</b><span class="muted small">total</span></span>
         <span class="crow__dots" title="Tarjeta SF Club: ${s.inCard} de 10">${Array.from({ length: 10 }, (_, i) => `<i class="${i < s.inCard ? 'on' : ''}"></i>`).join('')}</span>
       </button>`;
-    }).join('')}</div>` : `<div class="empty">${cust.length ? 'Nadie coincide con la búsqueda.' : 'Aún no hay clientes con cuenta. Cuando alguien se registre en la tienda, aparecerá aquí.'}</div>`}`;
+    }).join('')}</div>` : `<div class="empty">${st.customers.length ? 'Nadie coincide con la búsqueda.' : 'Aún no hay cuentas. Cuando alguien se registre en la tienda, aparecerá aquí.'}</div>`}`;
   }
 
   const EVENT_LABEL = { view: 'Vio una sección', product_view: 'Vio una prenda', add_to_cart: 'Agregó al carrito', remove_from_cart: 'Quitó del carrito', wishlist_add: 'Guardó en favoritos', wishlist_remove: 'Quitó de favoritos', search: 'Buscó', filter: 'Filtró', sign_up: 'Creó su cuenta', login: 'Inició sesión', logout: 'Cerró sesión', checkout_order_created: 'Hizo un pedido', notify_me: 'Pidió aviso de prenda', chat_open: 'Abrió el chat', chat_message: 'Escribió al asistente' };
@@ -413,7 +482,7 @@
     const addr = c.address ? [c.address.line1, c.address.line2, c.address.city, c.address.region].filter(Boolean).join(', ') : '';
     el.innerHTML = `
     <div class="sheet__panel" role="dialog" aria-modal="true" aria-label="Cliente">
-      <div class="sheet__head"><h2>${esc(c.name || c.email)}</h2><button class="btn btn--sm btn--ghost" data-close>Cerrar</button></div>
+      <div class="sheet__head"><h2>${esc(displayName(c))}${isAdminEmail(c.email) ? '<span class="tag-admin">Admin</span>' : ''}</h2><button class="btn btn--sm btn--ghost" data-close>Cerrar</button></div>
       <div class="sheet__body">
         <section class="group">
           <h3>Datos</h3>
@@ -434,12 +503,16 @@
         </div>
         <section class="group">
           <h3>Tarjeta SF Club</h3>
-          <div class="mini-card"><div class="mini-card__head"><img src="${LOGO}" alt=""><span>${esc(c.name || '')}</span><b>${s.inCard}/10</b></div><div class="mini-card__stamps">${stamps}</div></div>
+          <div class="mini-card"><div class="mini-card__head"><img src="${LOGO}" alt=""><span>${esc(displayName(c))}</span><b>${s.inCard}/10</b></div><div class="mini-card__stamps">${stamps}</div></div>
           <p class="muted small" style="margin:0">${s.inCard === 9 ? '¡Su próxima prenda tiene 60 % de descuento!' : `Le faltan ${9 - s.inCard} prenda${9 - s.inCard === 1 ? '' : 's'} para el 60 %.`} Lleva ${Math.floor(s.stamps / 10)} premio${Math.floor(s.stamps / 10) === 1 ? '' : 's'} ganado${Math.floor(s.stamps / 10) === 1 ? '' : 's'}.${s.pending ? ` Tiene ${s.pending} pedido${s.pending === 1 ? '' : 's'} por pagar (aún no suman sellos).` : ''}</p>
         </section>
         <section class="group">
           <h3>Pedidos (${s.orders.length})</h3>
           ${s.orders.length ? `<ul class="list">${s.orders.map(o => `<li><span><b>${esc(o.number)}</b> · ${units(o)} prenda${units(o) === 1 ? '' : 's'} <span class="muted small">${date(o.created_at)}</span>${o.discount ? ' <span class="chip chip--star">SF Club</span>' : ''}</span><span><span class="chip chip--o-${o.status}">${ORDER_STATUS[o.status]}</span> ${money(o.total)}</span></li>`).join('')}</ul>` : '<p class="muted small" style="margin:0">Aún no ha hecho pedidos.</p>'}
+        </section>
+        <section class="group">
+          <h3>Movimientos de la cuenta</h3>
+          ${accountList(st.accounts.filter(a => a.user_id === c.id).slice(0, 50), { withWho: false })}
         </section>
         <section class="group">
           <h3>Actividad en la tienda</h3>
@@ -502,11 +575,19 @@
             ${(p.sizes || []).map(s => `<label class="quick__f quick__f--s"><span>${esc(s)}</span><input class="input" name="s_${esc(s)}" type="number" min="0" inputmode="numeric" value="${+(p.stock?.[s] || 0)}"></label>`).join('')}
             <label class="quick__f"><span>Estado</span><select class="select" name="status">${Object.entries(STATUS).map(([k, l]) => `<option value="${k}" ${p.status === k ? 'selected' : ''}>${l.replace(/ \(.*\)/, '')}</option>`).join('')}</select></label>
             <button class="btn btn--sm btn--accent quick__save" type="submit" hidden>Guardar</button>
+            <button class="btn btn--sm btn--danger quick__del" type="button" data-qdel="${esc(p.id)}">Eliminar</button>
           </form>
         </article>`;
       }).join('') || '<div class="empty">No hay prendas que coincidan.</div>'}
     </div>`;
   }
+
+  // Eliminar desde la lista del inventario
+  app.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-qdel]'); if (!b) return;
+    e.preventDefault();
+    const p = st.products.find(x => x.id === b.dataset.qdel); if (p) deleteProduct(p);
+  });
 
   // Edición rápida: precio, unidades por talla y estado, sin abrir el editor
   app.addEventListener('input', (e) => { const f = e.target.closest('[data-quick]'); if (f) $('.quick__save', f).hidden = false; });
@@ -669,12 +750,12 @@
 
     el.addEventListener('click', async (e) => {
       const t = e.target;
-      if (t === el || t.closest('[data-close]')) { if (confirm('¿Cerrar sin guardar?')) close(); return; }
+      if (t === el || t.closest('[data-close]')) { if (await ask('¿Cerrar sin guardar los cambios?', 'Cerrar sin guardar')) close(); return; }
       if (t.closest('[data-add-size]')) { collect(); d.sizes.push(''); redraw('[data-stock]', stockRows()); $$('[data-size]', el).pop().focus(); }
       if (t.closest('[data-rm-size]')) { collect(); const i = +t.closest('[data-rm-size]').dataset.rmSize; const s = d.sizes[i]; d.sizes.splice(i, 1); delete d.stock[s]; redraw('[data-stock]', stockRows()); }
       if (t.closest('[data-add-color]')) { collect(); d.colors.push({ name: '', hex: '#ffffff' }); redraw('[data-colors]', colorRows()); }
       if (t.closest('[data-rm-color]')) { collect(); d.colors.splice(+t.closest('[data-rm-color]').dataset.rmColor, 1); redraw('[data-colors]', colorRows()); }
-      if (t.closest('[data-img-rm]')) { if (!confirm('¿Quitar esta foto de la prenda?')) return; d.images.splice(+t.closest('[data-img-rm]').dataset.imgRm, 1); redraw('[data-imgs]', imgs()); redraw('[data-pick-wrap]', pick()); }
+      if (t.closest('[data-img-rm]')) { if (!(await ask('¿Quitar esta foto de la prenda?', 'Quitar foto', true))) return; d.images.splice(+t.closest('[data-img-rm]').dataset.imgRm, 1); redraw('[data-imgs]', imgs()); redraw('[data-pick-wrap]', pick()); }
       if (t.closest('[data-img-first]')) { const i = +t.closest('[data-img-first]').dataset.imgFirst; d.images.unshift(...d.images.splice(i, 1)); redraw('[data-imgs]', imgs()); redraw('[data-pick-wrap]', pick()); }
       if (t.closest('[data-add-feat]')) { collect(); d.features.push({ title: '', text: '', x: 50, y: 50 }); selFeat = d.features.length - 1; redraw('[data-feats]', feats()); redraw('[data-pick-wrap]', pick()); }
       if (t.closest('[data-rm-feat]')) { collect(); d.features.splice(+t.closest('[data-rm-feat]').dataset.rmFeat, 1); selFeat = -1; redraw('[data-feats]', feats()); redraw('[data-pick-wrap]', pick()); }
@@ -739,13 +820,7 @@
     }
 
     async function del() {
-      if (!confirm(`¿Eliminar "${d.name}" para siempre?\n\nSi solo quieres ocultarla, cambia el estado a "Archivada".`)) return;
-      try {
-        await api(`products?id=eq.${encodeURIComponent(d.id)}`, { method: 'DELETE' });
-        toast('Prenda eliminada'); close(); await load();
-      } catch (ex) {
-        toast(/foreign|violates/i.test(ex.message) ? 'No se puede eliminar porque tiene pedidos. Archívala.' : ex.message, true);
-      }
+      if (await deleteProduct(d)) close();
     }
   }
 
