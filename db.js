@@ -36,12 +36,35 @@
     },
   };
 
-  /* Analítica: cada evento queda registrado para el futuro panel
-     de estadísticas de las dueñas/dueños (tabla `events`). */
+  /* Analítica propia → tabla `events` de la base de datos (la ve el panel privado).
+     Es OPCIONAL: solo se mide si la persona lo aceptó en el aviso de cookies.
+     Los eventos se envían en grupos para no hacer una llamada por cada clic. */
+  let queue = [], timer = null;
+  async function flush(useBeacon) {
+    clearTimeout(timer); timer = null;
+    const cfg = SF.config.supabase || {};
+    if (!queue.length || !cfg.url) return;
+    const batch = queue.splice(0, 50);
+    let bearer = cfg.anonKey;
+    const u = SF.auth?.user();
+    if (u) { try { bearer = (await SF.auth.token()) || cfg.anonKey; } catch {} }
+    const rows = batch.map(e => ({ ...e, user_id: bearer === cfg.anonKey ? null : e.user_id }));
+    try {
+      await fetch(`${cfg.url}/rest/v1/events`, {
+        method: 'POST', keepalive: !!useBeacon,
+        headers: { apikey: cfg.anonKey, Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify(rows),
+      });
+    } catch {}
+  }
+  addEventListener('pagehide', () => flush(true));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flush(true); });
+
   SF.track = (type, data = {}) => {
-    // Analítica = opcional: solo se mide si la persona lo aceptó en el banner de cookies
     if (!(SF.consent && SF.consent.cookies.analytics())) return;
-    const user = SF.db.kv.get('session');
-    SF.db.insert('events', { type, userId: user ? user.userId : null, path: location.pathname, ...data });
+    const u = SF.auth?.user();
+    const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined && String(v).length < 200));
+    queue.push({ type: String(type).slice(0, 40), path: (location.pathname + location.hash).slice(0, 200), data: clean, user_id: u ? u.id : null, anon_id: SF.consent.anonId?.() || null });
+    if (queue.length >= 20) flush(); else if (!timer) timer = setTimeout(flush, 4000);
   };
 })();

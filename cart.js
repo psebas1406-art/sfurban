@@ -4,8 +4,8 @@
    ========================================================= */
 (function () {
   const listeners = new Set();
-  const key = () => { const u = SF.db.kv.get('session'); return u ? 'cart:' + u.userId : 'cart:guest'; };
-  const wkey = () => { const u = SF.db.kv.get('session'); return u ? 'wish:' + u.userId : 'wish:guest'; };
+  const key = () => { const u = SF.auth.user(); return u ? 'cart:' + u.id : 'cart:guest'; };
+  const wkey = () => { const u = SF.auth.user(); return u ? 'wish:' + u.id : 'wish:guest'; };
   const emit = () => listeners.forEach(fn => fn());
 
   SF.cart = {
@@ -72,15 +72,20 @@
   };
 
   /* ---------- Tarjeta de fidelidad ----------
-     Cada prenda comprada = 1 sello. Por cada 9 prendas, la 10.ª tiene 60 % de descuento.
+     Cada prenda PAGADA = 1 sello. Por cada 9 prendas, la 10.ª tiene 60 % de descuento.
      Solo para clientes con cuenta (la tarjeta va a su nombre). El descuento se aplica
-     solo en el carrito, sobre la(s) prenda(s) más económica(s) que caen en el puesto 10. */
-  const GOAL = 10, PCT = 0.6;
+     solo en el carrito, sobre la(s) prenda(s) más económica(s) que caen en el puesto 10.
+     La base de datos recalcula lo mismo al crear el pedido: no se puede inventar. */
+  const GOAL = 10, PCT = 0.6, PAID = ['paid', 'shipped', 'delivered'];
   SF.loyalty = {
     GOAL, PCT,
-    // Sellos = prendas de los pedidos del cliente (los cancelados no cuentan)
+    // Sellos = prendas de pedidos pagados, enviados o entregados (vienen de la base de datos)
     stamps() {
-      return SF.orders.mine().filter(o => o.status !== 'cancelled' && o.status !== 'refunded')
+      return SF.orders.mine().filter(o => PAID.includes(o.status))
+        .reduce((a, o) => a + o.items.reduce((b, i) => b + i.qty, 0), 0);
+    },
+    pendingUnits() {
+      return SF.orders.mine().filter(o => o.status === 'pending_payment')
         .reduce((a, o) => a + o.items.reduce((b, i) => b + i.qty, 0), 0);
     },
     progress() { const s = SF.loyalty.stamps(); return { total: s, inCard: s % GOAL, left: GOAL - 1 - (s % GOAL), rewardNext: s % GOAL === GOAL - 1 }; },
@@ -110,12 +115,15 @@
         status: 'pending_payment', paymentProvider: null,
       };
       // Primero la base de datos (valida precios y stock); si lo rechaza, el carrito no se toca
-      const saved = SF.remote ? await SF.remote.saveOrder(draft) : { ok: true };
-      if (!saved.ok) { SF.remote.refresh(); throw new Error(saved.error); }
-      const order = SF.db.insert('orders', draft);
-      SF.track('checkout_order_created', { orderId: order.id, total: order.total });
-      SF.cart.clear(); return order;
+      const saved = SF.remote ? await SF.remote.saveOrder(draft, u ? await SF.auth.token() : null) : { ok: true };
+      if (!saved.ok) { SF.remote.refresh(); if (u) SF.auth.refreshOrders(); throw new Error(saved.error); }
+      const order = { ...draft, id: draft.number, createdAt: new Date().toISOString() };
+      SF.track('checkout_order_created', { orderNumber: order.number, total: order.total });
+      SF.cart.clear();
+      if (u) SF.auth.refreshOrders(); // el perfil y la tarjeta se actualizan desde la base de datos
+      return order;
     },
-    mine() { const u = SF.auth.user(); return u ? SF.db.where('orders', o => o.userId === u.id).reverse() : []; },
+    // Pedidos del cliente con cuenta: vienen de la base de datos (cualquier dispositivo)
+    mine() { return SF.auth.user() ? SF.auth.myOrders() : []; },
   };
 })();

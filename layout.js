@@ -264,6 +264,12 @@
             <button class="btn btn--accent btn--block" type="submit">Enviar enlace</button>
             <button type="button" class="link-btn" data-auth-tab="login">← Volver</button>
           </form>
+          <form class="form" data-auth-form="newpass" novalidate hidden>
+            <p class="muted">Escribe tu nueva contraseña.</p>
+            <label>Nueva contraseña<input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+            <p class="form-error" data-error></p>
+            <button class="btn btn--accent btn--block" type="submit">Guardar contraseña</button>
+          </form>
         </div>
       </div>
     </div>
@@ -341,9 +347,13 @@
           name: data.name, email: data.email, password: data.password,
           terms: f.c_terminos.checked, privacy: f.c_privacidad.checked, adult: f.c_mayoria_edad.checked, marketing: f.c_marketing.checked,
         });
-        SF.closeAll(); SF.toast(`¡Bienvenid@ al club, ${u.name.split(' ')[0]}!`);
+        SF.closeAll();
+        if (u.pending) SF.toast(`¡Listo, ${u.name.split(' ')[0]}! Te enviamos un correo a ${u.email}: ábrelo para activar tu cuenta.`, 'info');
+        else SF.toast(`¡Bienvenid@ al club, ${(u.name || '').split(' ')[0]}!`);
       } else if (type === 'login') {
-        const u = await SF.auth.login(data); SF.closeAll(); SF.toast(`Hola de nuevo, ${u.name.split(' ')[0]} 👋`);
+        const u = await SF.auth.login(data); SF.closeAll(); SF.toast(`Hola de nuevo, ${(u.name || '').split(' ')[0]} 👋`);
+      } else if (type === 'newpass') {
+        await SF.auth.setNewPassword(data.password); SF.closeAll(); SF.toast('Contraseña actualizada ✓');
       } else { await SF.auth.requestReset(data.email); SF.toast('Si el correo existe, te llegará un enlace.'); authTab('login'); }
       f.reset();
     } catch (ex) { err.textContent = ex.message; }
@@ -407,6 +417,12 @@
     });
     showCookieBanner(SF.consent.cookies.get() === null);
     SF.consent.flush();
+    // Llegó desde un enlace del correo (confirmar cuenta o cambiar contraseña)
+    const notice = SF.db.kv.get('authNotice');
+    if (notice) {
+      SF.db.kv.del('authNotice');
+      setTimeout(() => { if (notice === 'recovery') SF.openAuth('newpass'); else SF.toast(notice, 'info'); }, 600);
+    }
 
     SF.cart.onChange(updateBadges); SF.auth.onChange(updateBadges);
     updateBadges(); SF.reveal();

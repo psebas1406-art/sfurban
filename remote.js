@@ -67,12 +67,14 @@
     refresh,
     // Guarda el pedido en la base de datos (las reglas solo permiten crearlo, no leerlo).
     // La base de datos revisa precios y stock; si algo no cuadra, devuelve el motivo.
-    async saveOrder(o) {
+    // Con `token` (cliente con sesión) el pedido queda ligado a su cuenta.
+    async saveOrder(o, token) {
       if (!enabled) return { ok: true, offline: true };
       try {
         const r = await rest('orders', {
-          method: 'POST', headers: { Prefer: 'return=minimal' },
+          method: 'POST', headers: { Prefer: 'return=minimal', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify({
+            user_id: token ? o.userId : null,
             number: o.number, customer: o.customer, address: o.address || null, notes: o.notes || null,
             items: o.items, subtotal: o.subtotal, discount: o.discount || 0, loyalty: o.loyalty || null,
             shipping: o.shipping, total: o.total, currency: o.currency,
