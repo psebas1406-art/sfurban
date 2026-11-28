@@ -75,6 +75,12 @@
     saveSession({ access_token: j.access_token, refresh_token: j.refresh_token, expires_at: Date.now() + (j.expires_in - 60) * 1000, email: j.user?.email });
   }
   const login = (email, password) => authCall('password', { email, password });
+
+  /* Usuarios del panel → correo de su cuenta en Supabase.
+     La contraseña NO está aquí: la guarda y la verifica Supabase (cifrada).
+     El usuario no distingue mayúsculas. También se puede entrar con el correo. */
+  const ADMIN_USERS = { sfurban1812: 'sfurban.1814@gmail.com' };
+  const userToEmail = (u) => { const k = String(u || '').trim().toLowerCase(); return k.includes('@') ? k : (ADMIN_USERS[k] || null); };
   async function token() {
     if (!session) throw new Error('Sin sesión');
     if (Date.now() > session.expires_at) {
@@ -135,7 +141,7 @@
       <form class="login__box" data-login>
         <div class="login__brand"><img src="${LOGO}" alt=""><h1>Panel <span class="serif">SF Urban</span></h1></div>
         <p class="muted small">Solo para el equipo de la tienda.</p>
-        <label class="field"><span>Correo</span><input class="input" name="email" type="email" autocomplete="username" required></label>
+        <label class="field"><span>Usuario</span><input class="input" name="user" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
         <label class="field"><span>Contraseña</span><input class="input" name="password" type="password" autocomplete="current-password" required></label>
         <p class="err" data-err>${esc(msg)}</p>
         <button class="btn btn--accent" type="submit">Entrar</button>
@@ -144,8 +150,12 @@
     $('[data-login]').addEventListener('submit', async (e) => {
       e.preventDefault(); const f = e.target, b = $('button', f), err = $('[data-err]');
       b.disabled = true; b.innerHTML = '<span class="spin"></span>'; err.textContent = '';
-      try { await login(f.email.value.trim().toLowerCase(), f.password.value); await start(); }
-      catch (ex) { err.textContent = /invalid/i.test(ex.message) ? 'Correo o contraseña incorrectos.' : ex.message; b.disabled = false; b.textContent = 'Entrar'; }
+      try {
+        const email = userToEmail(f.user.value);
+        if (!email) throw new Error('invalid');
+        await login(email, f.password.value); await start();
+      }
+      catch (ex) { err.textContent = /invalid/i.test(ex.message) ? 'Usuario o contraseña incorrectos.' : ex.message; b.disabled = false; b.textContent = 'Entrar'; }
     });
   }
 
