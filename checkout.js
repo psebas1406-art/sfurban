@@ -17,7 +17,7 @@
     }
     const u = SF.auth.user() || {}; const a = u.address || {}; const t = SF.cart.totals();
     root.innerHTML = `
-      <div class="page-head"><span class="eyebrow">Paso final</span><h1 class="display h-m mt-1">Finalizar <span class="serif">compra</span></h1></div>
+      <div class="page-head"><span class="eyebrow">Paso final</span><h1 class="display h-m mt-1">${SF.auth.nick() ? `Ya casi es tuyo, <span class="serif">${esc(SF.auth.nick())}</span>` : 'Finalizar <span class="serif">compra</span>'}</h1></div>
       <div class="checkout">
         <form class="form" data-form novalidate>
           ${u.id ? '' : `<div class="notice">¿Ya tienes cuenta? <button type="button" class="link-btn" data-login>Inicia sesión</button> para guardar tu pedido y tus datos.</div>`}
@@ -114,7 +114,7 @@
       <div class="success" style="padding-top:calc(var(--header-h) + 60px)">
         <div class="success__check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
         <span class="eyebrow">Pedido ${esc(order.number)}</span>
-        <h1 class="display h-m">¡Gracias, <span class="serif">${esc(d.name.split(' ')[0])}</span>!</h1>
+        <h1 class="display h-m">¡Gracias, <span class="serif">${esc(SF.auth.nick() || d.name.split(' ')[0])}</span>!</h1>
         <p class="muted" style="max-width:480px">Tu pedido quedó reservado por ${SF.money(order.total)}. Te escribiremos a ${esc(d.email)} para coordinar el pago y el envío.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
           ${SF.auth.user() ? `<a class="btn btn--accent" href="index.html#perfil">Ver mis pedidos</a>` : `<button class="btn btn--accent" data-reg>Crear cuenta para seguir tu pedido</button>`}

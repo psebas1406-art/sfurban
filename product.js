@@ -82,7 +82,7 @@
       s.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(0)' }], { duration: 320 });
       return;
     }
-    try { SF.cart.add(p.id, size); SF.bump(); SF.toast(`${p.name} (${size}) en tu carrito`, 'ok', { label: 'Ver carrito', href: 'index.html#carrito' }); }
+    try { SF.cart.add(p.id, size); SF.bump(); SF.toast(SF.auth.nick() ? `${SF.auth.nick()}, ${p.name} (${size}) ya está en tu carrito` : `${p.name} (${size}) en tu carrito`, 'ok', { label: 'Ver carrito', href: 'index.html#carrito' }); }
     catch (ex) { SF.toast(ex.message, 'err'); }
   }));
 

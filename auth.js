@@ -45,12 +45,17 @@
     const s = getSession(); if (!s) return null;
     if (Date.now() < s.expires_at) return s.access_token;
     refreshing = refreshing || (async () => {
+      let r;
+      try { r = await fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`, { method: 'POST', headers: authHeaders, body: JSON.stringify({ refresh_token: s.refresh_token }) }); }
+      catch { return null; } // sin internet: no se cierra la sesión
       try {
-        const r = await fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`, { method: 'POST', headers: authHeaders, body: JSON.stringify({ refresh_token: s.refresh_token }) });
         const j = await r.json();
         if (!r.ok) throw j;
         saveSession(j); return j.access_token;
-      } catch { clearLocal(); emit(); return null; }
+      } catch {
+        // La sesión ya no es válida (p. ej. la cuenta fue eliminada): se borra todo de este navegador
+        const uid = s.user?.id; clearLocal(); ['cart:' + uid, 'wish:' + uid, 'consents', 'chatLog', 'chatSession'].forEach(k => SF.db.kv.del(k)); emit(); return null;
+      }
       finally { setTimeout(() => { refreshing = null; }, 0); }
     })();
     return refreshing;
@@ -68,7 +73,7 @@
   }
 
   /* ---------------- Perfil y pedidos (caché local) ---------------- */
-  const fromProfile = (c) => c && ({ id: c.id, email: c.email, name: c.name, phone: c.phone || '', address: c.address || null, marketing: !!c.marketing, whatsapp: !!c.whatsapp_optin, avatar: c.avatar_url || null, createdAt: c.created_at });
+  const fromProfile = (c) => c && ({ id: c.id, email: c.email, name: c.name, nickname: c.nickname || '', phone: c.phone || '', address: c.address || null, marketing: !!c.marketing, whatsapp: !!c.whatsapp_optin, avatar: c.avatar_url || null, createdAt: c.created_at });
   const fromOrder = (o) => ({
     id: o.id, number: o.number, userId: o.user_id, customer: o.customer, address: o.address, notes: o.notes,
     items: o.items || [], subtotal: o.subtotal, discount: o.discount || 0, shipping: o.shipping, total: o.total,
@@ -113,25 +118,36 @@
     token,
     api,
 
+    /** Cómo llamar al cliente: su apodo o, si no tiene, su primer nombre. Sin sesión: ''. */
+    nick() {
+      const u = SF.auth.user(); if (!u) return '';
+      return (u.nickname || '').trim() || String(u.name || '').trim().split(/\s+/)[0] || '';
+    },
+
     user() {
       const s = getSession(); if (!s) return null;
       return SF.db.kv.get(K.profile) || { id: s.user?.id, email: s.user?.email, name: '' };
     },
 
-    // Datos mínimos: solo nombre, correo y contraseña.
-    async register({ name, email, password, terms, privacy, adult, marketing = false, whatsapp = false, phone = '' }) {
-      name = (name || '').trim(); email = (email || '').trim().toLowerCase();
-      phone = SF.auth.cleanPhone(phone);
-      if (whatsapp && !phone) throw new Error('Escribe tu número de WhatsApp para recibir los avisos (o desmarca esa casilla).');
-      if (name.length < 2) throw new Error('Escribe tu nombre.');
-      if (!emailOk(email)) throw new Error('Ese correo no parece válido.');
+    /** Revisa el formulario de registro ANTES de preguntar por WhatsApp (lanza el error que falte). */
+    checkRegister({ name, email, phone, password, terms, privacy, adult }) {
+      if ((name || '').trim().length < 2) throw new Error('Escribe tu nombre.');
+      if (!SF.auth.cleanPhone(phone)) throw new Error('Escribe tu número de celular (10 dígitos, ej. 300 123 4567).');
+      if (!emailOk((email || '').trim())) throw new Error('Ese correo no parece válido.');
       if ((password || '').length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
       if (!terms) throw new Error('Para crear la cuenta debes aceptar los Términos y condiciones.');
       if (!privacy) throw new Error('Para crear la cuenta debes autorizar el tratamiento de datos (Política de privacidad).');
       if (!adult) throw new Error('Debes ser mayor de 18 años para crear una cuenta.');
+    },
+
+    // Datos de la cuenta: nombre, celular, correo y contraseña.
+    async register({ name, email, password, terms, privacy, adult, marketing = false, whatsapp = false, phone = '' }) {
+      SF.auth.checkRegister({ name, email, phone, password, terms, privacy, adult });
+      name = (name || '').trim(); email = (email || '').trim().toLowerCase();
+      phone = SF.auth.cleanPhone(phone);
       const r = await fetch(`${cfg.url}/auth/v1/signup?redirect_to=${encodeURIComponent(site())}`, {
         method: 'POST', headers: authHeaders,
-        body: JSON.stringify({ email, password, data: { name: name.slice(0, 80), marketing: !!marketing, whatsapp: !!whatsapp, phone: whatsapp ? phone : '' } }),
+        body: JSON.stringify({ email, password, data: { name: name.slice(0, 80), marketing: !!marketing, whatsapp: !!whatsapp, phone } }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(niceError(j, 'No se pudo crear la cuenta.'));
@@ -147,11 +163,11 @@
         ],
       });
       // WhatsApp va en un registro aparte (decisión independiente del cliente)
-      await SF.consent.record({ form: 'registro', email, userId, items: [{ purpose: 'whatsapp', granted: !!whatsapp }] });
+      await SF.consent.record({ form: 'registro', method: 'ventana de pregunta al crear la cuenta (Sí / No)', email, userId, items: [{ purpose: 'whatsapp', granted: !!whatsapp }] });
       SF.track('sign_up', { method: 'email' });
       if (!j.access_token) return { name, email, pending: true }; // debe confirmar el correo
       saveSession(j);
-      SF.db.kv.set(K.profile, { id: userId, email, name, marketing: !!marketing, whatsapp: !!whatsapp, phone: whatsapp ? phone : '', avatar: null, address: null, createdAt: new Date().toISOString() });
+      SF.db.kv.set(K.profile, { id: userId, email, name, marketing: !!marketing, whatsapp: !!whatsapp, phone, avatar: null, address: null, createdAt: new Date().toISOString() });
       api('rpc/registrar_inicio_sesion', { method: 'POST', body: {} }).catch(() => {});
       await afterLogin();
       return SF.auth.user();
@@ -180,7 +196,7 @@
     // Guarda al instante en este dispositivo y luego en la base de datos
     updateProfile(patch) {
       const u = SF.auth.user(); if (!u) return null;
-      const allowed = ['name', 'phone', 'address'];
+      const allowed = ['name', 'nickname', 'phone', 'address'];
       const clean = Object.fromEntries(Object.entries(patch).filter(([k]) => allowed.includes(k)));
       SF.db.kv.set(K.profile, { ...u, ...clean }); emit();
       api(`customers?id=eq.${u.id}`, { method: 'PATCH', body: clean }).catch(e => SF.toast?.(e.message, 'err'));
@@ -194,6 +210,15 @@
       await api(`customers?id=eq.${u.id}`, { method: 'PATCH', body: { marketing: !!on } }).catch(() => {});
       await SF.consent.record({ form: 'perfil', method: 'interruptor en el perfil', email: u.email, userId: u.id, items: [{ purpose: 'marketing', granted: !!on }] });
       emit();
+    },
+
+    /** Apodo: cómo quiere que SF Urban le llame (máx. 30 caracteres, vacío = su primer nombre). */
+    async setNickname(nick) {
+      const u = SF.auth.user(); if (!u) return;
+      const clean = String(nick || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 30);
+      SF.db.kv.set(K.profile, { ...u, nickname: clean }); emit();
+      await api(`customers?id=eq.${u.id}`, { method: 'PATCH', body: { nickname: clean || null } });
+      return clean;
     },
 
     /** Deja solo dígitos; a un celular colombiano de 10 dígitos le agrega el 57. */
@@ -294,6 +319,24 @@
     refreshOrders: () => loadOrders().then(l => { emit(); return l; }).catch(() => SF.auth.myOrders()),
   };
 
-  // Al abrir la página con sesión: actualizar perfil y pedidos en segundo plano
-  if (getSession()) afterLogin();
+  /* Si la tienda borró la cuenta (o la persona la borró desde otro dispositivo), al volver
+     se quita TODO lo de esa cuenta de este navegador: sesión, perfil, pedidos, carrito,
+     favoritos, chat y copia de autorizaciones. Queda como si nunca hubiera entrado. */
+  function wipeAccountFromDevice(uid) {
+    clearLocal();
+    ['cart:' + uid, 'wish:' + uid, 'consents', 'chatLog', 'chatSession', 'authNotice'].forEach(k => SF.db.kv.del(k));
+    emit();
+  }
+  async function verifyAccount() {
+    const s = getSession(); if (!s) return;
+    const t = await token(); if (!t) { if (!getSession()) wipeAccountFromDevice(s.user?.id); return; } // ya no se pudo renovar
+    try {
+      const r = await fetch(`${cfg.url}/auth/v1/user`, { headers: { ...authHeaders, Authorization: `Bearer ${t}` } });
+      if (r.status === 401 || r.status === 403 || r.status === 404) { wipeAccountFromDevice(s.user?.id); return; }
+    } catch { /* sin internet: se deja como está */ }
+    afterLogin();
+  }
+
+  // Al abrir la página con sesión: comprobar que la cuenta sigue existiendo y actualizar
+  if (getSession()) verifyAccount();
 })();

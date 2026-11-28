@@ -250,13 +250,12 @@
           </form>
           <form class="form" data-auth-form="register" novalidate hidden>
             <label>Nombre<input name="name" autocomplete="name" required></label>
+            <label>Celular<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej. 300 123 4567" required></label>
             <label>Correo<input name="email" type="email" autocomplete="email" required></label>
             <label>Contraseña<input name="password" type="password" autocomplete="new-password" minlength="8" required><small class="muted">Mínimo 8 caracteres.</small></label>
             ${legalChecks()}
             ${SF.consent.checkbox('marketing', { required: false })}
-            ${SF.consent.checkbox('whatsapp', { required: false })}
-            <label class="wa-phone" data-wa-phone hidden>Tu número de WhatsApp<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej. 300 123 4567"><small class="muted">Solo lo usamos para estos avisos. Puedes retirarlos cuando quieras.</small></label>
-            <p class="legal-note">Solo te pedimos lo necesario para tu cuenta. Tu celular solo se pide si quieres avisos por WhatsApp; la dirección, al comprar. <a href="${SF.config.legal.docs.privacidad}" target="_blank" rel="noopener">¿Cómo usamos tus datos?</a></p>
+            <p class="legal-note">Tu celular sirve para avisos sobre tus pedidos y tu cuenta. La dirección se pide al comprar. <a href="${SF.config.legal.docs.privacidad}" target="_blank" rel="noopener">¿Cómo usamos tus datos?</a></p>
             <p class="form-error" data-error></p>
             <button class="btn btn--accent btn--block" type="submit">Crear cuenta</button>
           </form>
@@ -353,22 +352,79 @@
     $$('[data-auth-form] [data-error]').forEach(e => e.textContent = '');
   }
   SF.openAuth = (tab = 'login') => { authTab(tab); SF.open('auth'); };
+
+  /* Ventanilla después de crear la cuenta: el apodo con el que la tienda le hablará.
+     Es opcional: si la deja vacía, se usa su primer nombre. */
+  function askNickname(name) {
+    return new Promise((resolve) => {
+      const first = String(name || '').trim().split(/\s+/)[0] || '';
+      const m = document.createElement('div');
+      m.className = 'wa-ask';
+      m.innerHTML = `<form class="wa-ask__box nick-ask" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="nickT" novalidate>
+        <div class="wa-ask__ic nick-ask__ic">${SF.isoSVG}</div>
+        <h3 id="nickT">¿Cómo quieres que SF Urban te llame?</h3>
+        <p class="muted">Pon tu apodo aquí y te hablaremos así en la tienda.</p>
+        <input class="nick-ask__input" name="nick" maxlength="30" autocomplete="nickname" placeholder="${esc(first ? 'Ej. ' + first : 'Tu apodo')}" aria-label="Tu apodo">
+        <div class="wa-ask__btns"><button type="button" class="btn btn--ghost" data-nick-skip>Ahora no</button><button type="submit" class="btn btn--accent">Listo</button></div>
+      </form>`;
+      document.body.appendChild(m);
+      requestAnimationFrame(() => m.classList.add('is-in'));
+      const input = m.querySelector('input');
+      const done = (v) => { m.remove(); resolve(v); };
+      m.querySelector('form').addEventListener('submit', (e) => { e.preventDefault(); done(input.value.trim()); });
+      m.querySelector('[data-nick-skip]').addEventListener('click', () => done(''));
+      setTimeout(() => input.focus(), 80);
+    });
+  }
+
+  /* Ventanilla al crear la cuenta: ¿avisos por WhatsApp? Sí o No (ninguna opción viene marcada).
+     Devuelve true / false. Cerrarla sin elegir cuenta como "No". */
+  function askWhatsapp(name) {
+    return new Promise((resolve) => {
+      const first = esc(String(name || '').trim().split(/\s+/)[0] || '');
+      const m = document.createElement('div');
+      m.className = 'wa-ask';
+      m.innerHTML = `<div class="wa-ask__box" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="waAskT">
+        <div class="wa-ask__ic">${WA_SVG}</div>
+        <h3 id="waAskT">${first ? `${first}, ¿te` : '¿Te'} avisamos por WhatsApp?</h3>
+        <p>${esc(SF.consent.TEXTS.whatsapp.replace(' (opcional).', '.'))}</p>
+        <p class="muted small">Es opcional y no cambia nada de tu cuenta. Respetamos los horarios permitidos por la ley y puedes cambiar tu decisión cuando quieras en <b>Perfil → Privacidad</b>. <a href="${SF.config.legal.docs.privacidad}" target="_blank" rel="noopener">Privacidad</a></p>
+        <div class="wa-ask__btns"><button class="btn btn--ghost" data-wa-no>No, gracias</button><button class="btn btn--wa" data-wa-yes>Sí, quiero avisos</button></div>
+      </div>`;
+      document.body.appendChild(m);
+      requestAnimationFrame(() => m.classList.add('is-in'));
+      const done = (v) => { m.remove(); removeEventListener('keydown', onKey); resolve(v); };
+      const onKey = (e) => { if (e.key === 'Escape') done(false); };
+      addEventListener('keydown', onKey);
+      m.addEventListener('click', (e) => {
+        if (e.target.closest('[data-wa-yes]')) done(true);
+        else if (e.target.closest('[data-wa-no]') || e.target === m) done(false);
+      });
+      setTimeout(() => m.querySelector('.wa-ask__box').focus(), 50); // sin preseleccionar ninguna respuesta
+    });
+  }
   async function onAuthSubmit(e) {
     e.preventDefault(); const f = e.target; const type = f.dataset.authForm; const err = f.querySelector('[data-error]');
     const data = Object.fromEntries(new FormData(f)); err.textContent = '';
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     try {
       if (type === 'register') {
-        const u = await SF.auth.register({
-          name: data.name, email: data.email, password: data.password,
+        const reg = {
+          name: data.name, email: data.email, password: data.password, phone: data.phone,
           terms: f.c_terminos.checked, privacy: f.c_privacidad.checked, adult: f.c_mayoria_edad.checked, marketing: f.c_marketing.checked,
-          whatsapp: f.c_whatsapp.checked, phone: data.phone,
-        });
+        };
+        SF.auth.checkRegister(reg);                   // primero se revisa todo el formulario…
+        reg.whatsapp = await askWhatsapp(data.name);  // …y luego la pregunta: Sí o No, decide el cliente
+        const u = await SF.auth.register(reg);
         SF.closeAll();
         if (u.pending) SF.toast(`¡Listo, ${u.name.split(' ')[0]}! Te enviamos un correo a ${u.email}: ábrelo para activar tu cuenta.`, 'info');
-        else SF.toast(`¡Bienvenid@ al club, ${(u.name || '').split(' ')[0]}!`);
+        else {
+          const nick = await askNickname(u.name);           // "¿Cómo quieres que SF Urban te llame?"
+          if (nick) await SF.auth.setNickname(nick).catch(() => {});
+          SF.toast(`¡Bienvenid@ al club, ${SF.auth.nick()}!`); SF.goView('perfil');
+        }
       } else if (type === 'login') {
-        const u = await SF.auth.login(data); SF.closeAll(); SF.toast(`Hola de nuevo, ${(u.name || '').split(' ')[0]} 👋`);
+        await SF.auth.login(data); SF.closeAll(); SF.toast(`Hola de nuevo, ${SF.auth.nick()} 👋`);
       } else if (type === 'newpass') {
         await SF.auth.setNewPassword(data.password); SF.closeAll(); SF.toast('Contraseña actualizada ✓');
       } else { await SF.auth.requestReset(data.email); SF.toast('Si el correo existe, te llegará un enlace.'); authTab('login'); }
@@ -421,12 +477,6 @@
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); SF.goView('explorar'); }
     });
     $$('[data-auth-form]').forEach(f => f.addEventListener('submit', onAuthSubmit));
-    // El celular solo aparece (y se pide) si la persona quiere avisos por WhatsApp
-    document.addEventListener('change', (e) => {
-      if (!e.target.matches('[data-auth-form="register"] [name="c_whatsapp"]')) return;
-      const box = $('[data-wa-phone]'); box.hidden = !e.target.checked;
-      if (e.target.checked) box.querySelector('input').focus();
-    });
     if (SF.chat) SF.chat.bind();
 
     // Cookies: el aviso aparece hasta que la persona decide; nada opcional se activa antes.

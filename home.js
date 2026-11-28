@@ -36,6 +36,8 @@
       <div class="pcard__sub"><span class="swatch" style="background:${p.colors[0].hex}"></span>${esc(p.colors[0].name)}${p.sizes.length ? ` · ${p.sizes[0]}–${p.sizes[p.sizes.length - 1]}` : ''}</div>
     </article>`;
   };
+  // Con sesión, algunos títulos le hablan al cliente por su apodo; sin sesión, quedan para todo el mundo
+  const hi = (withNick, plain) => { const n = SF.auth.nick(); return n ? withNick(`<span class="serif nick">${esc(n)}</span>`) : plain; };
   const head = (title, sub, extra = '') => `<header class="view-head"><div><h1 class="display h-m">${title}</h1>${sub ? `<p class="muted">${sub}</p>` : ''}</div>${extra}</header>`;
   const empty = (ic, title, text, btn) => `<div class="empty"><div class="empty__icon">${icon[ic]}</div><h3>${title}</h3><p>${text}</p>${btn || ''}</div>`;
 
@@ -74,7 +76,7 @@
       </section>
 
       <section class="sec catalog" id="catalogo">
-        <div class="sec__head"><h2 class="sec__title">Catálogo</h2><span class="muted">${active().length} ${active().length === 1 ? 'prenda disponible' : 'prendas disponibles'}</span></div>
+        <div class="sec__head"><h2 class="sec__title">${hi(n => `Mira nuestro catálogo, ${n}`, 'Catálogo')}</h2><span class="muted">${active().length} ${active().length === 1 ? 'prenda disponible' : 'prendas disponibles'}</span></div>
         <div class="grid2 catalog__grid">${list.map(card).join('')}</div>
       </section>
 
@@ -86,7 +88,7 @@
 
     explorar() {
       return `
-        ${head('Explorar', `${active().length} ${active().length === 1 ? 'prenda disponible' : 'prendas disponibles'} · ${soon().length} en camino`)}
+        ${head(hi(n => `¿Qué buscas hoy, ${n}?`, 'Explorar'), `${active().length} ${active().length === 1 ? 'prenda disponible' : 'prendas disponibles'} · ${soon().length} en camino`)}
         <label class="searchbox">${icon.search}<input type="search" placeholder="Busca prendas, colores, drops…" value="${esc(ex.q)}" data-ex-q aria-label="Buscar"></label>
         <div class="filters">
           <div class="chips scroll-x">${[{ id: 'all', label: 'Todo' }, ...SF.categories].map(c => `<button class="chip ${ex.cat === c.id ? 'is-on' : ''}" data-ex-cat="${c.id}">${c.label}</button>`).join('')}</div>
@@ -103,16 +105,16 @@
 
     favoritos() {
       const list = SF.wish.list().map(SF.getProduct).filter(Boolean);
-      return `${head('Favoritos', list.length ? `${list.length} ${list.length === 1 ? 'prenda guardada' : 'prendas guardadas'}` : '')}
+      return `${head(hi(n => `Tus favoritos, ${n}`, 'Favoritos'), list.length ? `${list.length} ${list.length === 1 ? 'prenda guardada' : 'prendas guardadas'}` : '')}
         ${list.length ? `<div class="grid2">${list.map(card).join('')}</div>`
           : empty('heart', 'Aún no guardas nada', 'Toca el ♡ en cualquier prenda y aparecerá aquí.', `<button class="btn btn--ghost" data-go="explorar">Explorar prendas</button>`)}`;
     },
 
     carrito() {
       const lines = SF.cart.detailed(), t = SF.cart.totals();
-      if (!lines.length) return `${head('Carrito')}${empty('cart', 'Tu carrito está vacío', 'Cuando añadas prendas aparecerán aquí.', `<button class="btn btn--accent" data-go="explorar">Explorar prendas</button>`)}`;
+      if (!lines.length) return `${head(hi(n => `Tu carrito, ${n}`, 'Carrito'))}${empty('cart', 'Tu carrito está vacío', hi(n => `${n}, cuando añadas prendas aparecerán aquí.`, 'Cuando añadas prendas aparecerán aquí.'), `<button class="btn btn--accent" data-go="explorar">Explorar prendas</button>`)}`;
       const pct = Math.min(100, (t.subtotal / t.freeFrom) * 100);
-      return `${head('Carrito', `${SF.cart.count()} ${SF.cart.count() === 1 ? 'artículo' : 'artículos'}`)}
+      return `${head(hi(n => `Tu carrito, ${n}`, 'Carrito'), `${SF.cart.count()} ${SF.cart.count() === 1 ? 'artículo' : 'artículos'}`)}
         <div class="cart-layout">
           <div class="panel">
             <div class="free-ship"><p>${t.missingForFree ? `Te faltan <strong>${SF.money(t.missingForFree)}</strong> para envío gratis` : '¡Tienes <strong>envío gratis</strong>!'}</p><div class="bar"><span style="width:${pct}%"></span></div></div>
@@ -188,7 +190,7 @@
         pedidos: orders.length ? `<div class="panel">${orders.map(o => `<div class="order"><div><strong>${esc(o.number)}</strong> <span class="muted">· ${new Date(o.createdAt).toLocaleDateString('es')}</span><br><span class="muted">${o.items.map(i => `${esc(i.name)} (${esc(i.size)}) x${i.qty}`).join(', ')}</span></div><div style="text-align:right"><strong>${SF.money(o.total)}</strong><br><span class="status">${statusTxt[o.status] || o.status}</span></div></div>`).join('')}</div>`
           : empty('box', 'Sin pedidos todavía', 'Cuando compres, verás aquí el estado de cada pedido.', `<button class="btn btn--ghost" data-go="explorar">Explorar</button>`),
         datos: `<div class="panel"><form class="form" data-profile>
-            <label>Nombre<input name="name" value="${esc(u.name)}" required></label>
+            <div class="form-row"><label>Nombre<input name="name" value="${esc(u.name)}" required></label><label>Apodo <span class="muted">(cómo te llamamos en la tienda)</span><input name="nickname" maxlength="30" value="${esc(u.nickname || '')}" placeholder="${esc(String(u.name || '').split(' ')[0])}"></label></div>
             <div class="form-row"><label>Correo<input value="${esc(u.email)}" disabled></label><label>Celular / WhatsApp <span class="muted">(opcional: entregas y avisos si los autorizas)</span><input name="phone" type="tel" inputmode="tel" value="${esc(u.phone || '')}"></label></div>
             <button class="btn btn--accent" style="justify-self:start">Guardar cambios</button></form></div>`,
         privacidad: (() => {
@@ -230,7 +232,7 @@
             <span class="sr-only">Cambiar foto de perfil</span>
           </label>
           ${u.avatar ? '<button class="link-btn me__av-rm" data-avatar-rm>Quitar foto</button>' : ''}
-          <div class="me__txt"><h1 class="display h-s">${esc(u.name)}</h1><p class="muted">${esc(u.email)} · Miembro desde ${new Date(u.createdAt).toLocaleDateString('es', { month: 'long', year: 'numeric' })}</p></div>
+          <div class="me__txt"><h1 class="display h-s">Hola, <span class="serif nick">${esc(SF.auth.nick() || u.name)}</span></h1><p class="muted">${esc(u.name)} · ${esc(u.email)} · Miembro desde ${new Date(u.createdAt).toLocaleDateString('es', { month: 'long', year: 'numeric' })}</p></div>
           <button class="btn btn--ghost btn--sm" data-logout>${icon.logout} Salir</button>
         </div>
         <div class="me__stats"><div><b>${orders.length}</b><span>Pedidos</span></div><div><b>${SF.wish.list().length}</b><span>Favoritos</span></div><div><b>${SF.cart.count()}</b><span>En carrito</span></div></div>
@@ -358,13 +360,16 @@
   });
   view.addEventListener('submit', (e) => {
     const f = e.target; e.preventDefault();
-    if (f.matches('[data-profile]')) { SF.auth.updateProfile({ name: f.name.value.trim() || SF.auth.user().name, phone: f.phone.value }); SF.toast('Datos guardados ✓'); }
+    if (f.matches('[data-profile]')) {
+      SF.auth.updateProfile({ name: f.name.value.trim() || SF.auth.user().name, phone: f.phone.value });
+      SF.auth.setNickname(f.nickname.value).then(() => SF.toast(`Datos guardados ✓ ${SF.auth.nick() ? '¡Listo, ' + SF.auth.nick() + '!' : ''}`)).catch(ex => SF.toast(ex.message, 'err'));
+    }
     if (f.matches('[data-address]')) { SF.auth.updateProfile({ address: { line1: f.line1.value, line2: f.line2.value, city: f.city.value, region: f.region.value } }); SF.toast('Dirección guardada ✓'); }
   });
 
   // Mantener las vistas al día cuando cambian carrito, favoritos o sesión
   SF.cart.onChange(() => { if (['carrito', 'favoritos', 'perfil'].includes(shown)) render(true); else $$('[data-wish]', view).forEach(b => b.classList.toggle('is-on', SF.wish.has(b.dataset.wish))); });
-  SF.auth.onChange(() => { if (['perfil', 'pagos', 'inicio'].includes(shown)) render(true); });
+  SF.auth.onChange(() => { if (['perfil', 'pagos', 'inicio', 'carrito', 'favoritos', 'explorar'].includes(shown)) render(true); });
   view.addEventListener('click', (e) => {
     if (!e.target.closest('[data-avatar-rm]')) return;
     SF.auth.removeAvatar().then(() => SF.toast('Foto quitada')).catch(ex => SF.toast(ex.message, 'err'));

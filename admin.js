@@ -242,6 +242,7 @@
   const isAdminEmail = (email) => adminEmails().has(email);
   // Nombre a mostrar: el que escribió al registrarse o, si no hay, la primera parte del correo
   const displayName = (c) => (c?.name || '').trim() || (c?.email ? c.email.split('@')[0] : '(sin nombre)');
+  const nickOf = (c) => (c?.nickname || '').trim();
 
   /* ---------- Movimientos de cuentas (registro de seguridad, siempre activo) ---------- */
   const ACCOUNT_ACTION = {
@@ -258,7 +259,8 @@
     return `<ul class="acts">${rows.map(a => {
       const [ic, label] = ACCOUNT_ACTION[a.action] || ['•', a.action];
       const c = st.customers.find(x => x.id === a.user_id);
-      const name = displayName(c || { name: a.name, email: a.email });
+      // Si la cuenta se eliminó, sus movimientos quedan sin nombre ni correo
+      const name = (!c && !a.name && !a.email) ? 'Cliente eliminado' : displayName(c || { name: a.name, email: a.email });
       const who = withWho
         ? `<b>${c ? `<button class="linkbtn" style="padding:0" data-customer="${esc(c.id)}">${esc(name)}</button>` : esc(name)}${isAdminEmail(a.email) ? '<span class="tag-admin">Admin</span>' : ''}</b><span class="muted small">${esc(label)} · ${esc(a.email || '')}</span>`
         : `<b>${esc(label)}</b>`;
@@ -490,7 +492,7 @@
 
   // Número para wa.me: solo dígitos y con indicativo de Colombia si falta
   const waNumber = (p) => { let d = String(p || '').replace(/\D/g, ''); if (d.length === 10 && d.startsWith('3')) d = '57' + d; return d.length >= 10 ? d : ''; };
-  const deletionMessage = (name) => `Hola${name ? ' ' + name.split(' ')[0] : ''} 👋 Te escribimos de SF Urban. Debido a la falta de actividad en tu cuenta, tus datos fueron eliminados de nuestra tienda sfurban. Si quieres volver, puedes crear una cuenta nueva cuando quieras en ${location.origin + location.pathname.replace(/[^/]*$/, '')} ¡Gracias por ser parte de SF Urban!`;
+  const deletionMessage = (name) => `Hola${name ? ' ' + name.split(' ')[0] : ''} 👋 Te escribimos de SF Urban. Debido a la falta de actividad en tu cuenta, la eliminamos junto con tus datos personales: ya no tienes cuenta ni sesión abierta en sfurban y no conservamos tus datos personales (salvo lo que la ley nos exige guardar). Si quieres volver, crea una cuenta nueva cuando quieras en ${location.origin + location.pathname.replace(/[^/]*$/, '')} ¡Gracias por ser parte de SF Urban!`;
 
   async function deleteCustomer(c, closeSheet) {
     const name = displayName(c);
@@ -503,7 +505,10 @@
       }
       const r = await api('rpc/admin_eliminar_cliente', { method: 'POST', body: { cliente: c.id } });
       st.customers = st.customers.filter(x => x.id !== c.id);
-      st.accounts.unshift({ user_id: c.id, email: c.email, name: c.name, action: 'deleted_by_admin', created_at: new Date().toISOString() });
+      // Igual que en la base de datos: sus movimientos y pedidos quedan sin datos personales
+      st.accounts.forEach(a => { if (a.user_id === c.id) { a.name = null; a.email = null; } });
+      st.accounts.unshift({ user_id: c.id, email: null, name: null, action: 'deleted_by_admin', created_at: new Date().toISOString() });
+      st.orders.forEach(o => { if (o.user_id === c.id) { o.customer = { name: 'Cliente eliminado' }; o.address = null; o.notes = null; } });
       closeSheet(); render();
       notifyDeletion({ name: r?.name || c.name, phone: r?.phone || c.phone, email: r?.email || c.email });
     } catch (ex) { toast(ex.message, true); }
@@ -549,6 +554,7 @@
           <h3>Datos</h3>
           ${c.avatar_url ? `<img class="cust-photo" src="${esc(c.avatar_url)}" alt="Foto de perfil">` : ''}
           <dl class="dl">
+            <dt>Apodo</dt><dd>${esc(nickOf(c) || '—')}</dd>
             <dt>Correo</dt><dd>${esc(c.email)}</dd>
             <dt>Celular</dt><dd>${esc(c.phone || '—')}</dd>
             <dt>Avisos por WhatsApp</dt><dd>${c.whatsapp_optin ? '<span class="yes">Autorizados</span>' : '<span class="muted">No autorizados</span>'}</dd>
@@ -589,7 +595,7 @@
         </section>
         ${isAdminEmail(c.email) ? '' : `<section class="group group--danger">
           <h3>Eliminar datos del cliente</h3>
-          <p class="muted small" style="margin:0">Borra su cuenta, perfil, foto y actividad de la tienda. Sus pedidos se conservan sin su nombre (obligación contable) y sus autorizaciones se conservan como prueba legal. Después podrás avisarle por WhatsApp.</p>
+          <p class="muted small" style="margin:0">Borra su cuenta, perfil, foto, apodo y actividad, y cierra su sesión en todos sus dispositivos. Sus pedidos quedan en el historial pero sin nombre, correo, celular ni dirección; solo se conservan sus autorizaciones, porque la ley exige guardar esa prueba. Después podrás avisarle por WhatsApp.</p>
           <button class="btn btn--danger" data-del-customer>Eliminar datos de ${esc(displayName(c))}</button>
         </section>`}
       </div>

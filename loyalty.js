@@ -43,9 +43,10 @@
     if (!u) return `
       <p><b>Activa tu tarjeta</b>Crea tu cuenta gratis para que la tarjeta quede a tu nombre y empiece a sumar sellos.</p>
       <div class="lmodal__cta"><button class="btn btn--accent" data-loyal-auth="register">Crear mi cuenta</button><button class="btn btn--ghost" data-loyal-auth="login">Ya tengo cuenta</button></div>`;
+    const n = esc(SF.auth.nick());
     const msg = p.rewardNext
-      ? `<b>¡Tu próxima prenda tiene 60 % de descuento!</b>Se aplica sola en tu carrito.`
-      : `<b>Te ${p.left === 1 ? 'falta 1 prenda' : `faltan ${p.left} prendas`} para tu 60 %</b>Llevas ${p.inCard} de ${SF.loyalty.GOAL - 1} sellos.`;
+      ? `<b>¡${n ? n + ', tu' : 'Tu'} próxima prenda tiene 60 % de descuento!</b>Se aplica sola en tu carrito.`
+      : `<b>${n ? n + ', te' : 'Te'} ${p.left === 1 ? 'falta 1 prenda' : `faltan ${p.left} prendas`} para tu 60 %</b>Llevas ${p.inCard} de ${SF.loyalty.GOAL - 1} sellos.`;
     return `<p>${msg}</p>`;
   }
 
