@@ -20,6 +20,15 @@ SF.config = {
   // Asistente de IA (servidor en Render). El chat de la web le habla a {agentUrl}/chat
   agentUrl: 'https://sfurban-agente.onrender.com',
 
+  // Base de datos (Supabase). La tienda lee de aquí el inventario que cambian en admin.html.
+  // La "anon key" es PÚBLICA a propósito: solo permite lo que las reglas (RLS) dejan
+  // (ver prendas publicadas y crear pedidos). NUNCA poner aquí la "service_role key".
+  // Vacío = la tienda usa el catálogo de products.js.
+  supabase: {
+    url: 'https://nhzgplcxkigdcgcjfkti.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oemdwbGN4a2lnZGNnY2pma3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU4MjkzOTEsImV4cCI6MjExMTQwNTM5MX0.slApE5IpOgxrWwlTK9Fuy_5mMNPadL6K3xxioyp-aZ0',
+  },
+
   /* ---------- Legal (Colombia) ----------
      Identificación del vendedor: la exige el Estatuto del Consumidor (Ley 1480/2011, art. 50)
      en toda venta por internet. Llenar con los datos REALES del responsable (persona natural

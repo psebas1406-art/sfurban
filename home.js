@@ -8,7 +8,6 @@
   SF.mountLayout();
 
   const app = $('[data-app]'), view = $('[data-view]');
-  const main = SF.getProduct('p-0001');
   const active = () => SF.catalog.filter(p => p.status === 'active');
   const soon = () => SF.catalog.filter(p => p.status !== 'active');
   const catLabel = (id) => SF.categories.find(c => c.id === id)?.label || '';
@@ -29,12 +28,12 @@
     const w = SF.wish.has(p.id);
     return `<article class="pcard">
       <a class="pcard__media" href="producto.html?id=${p.id}" aria-label="${esc(p.name)}">
-        <img src="${p.images[0]}" alt="" loading="lazy">
+        ${p.images[0] ? `<img src="${p.images[0]}" alt="" loading="lazy">` : ''}
         ${p.badges[0] ? `<span class="tag tag--accent pcard__tag">${esc(p.badges[0])}</span>` : ''}
       </a>
       <button class="icon-btn pcard__wish ${w ? 'is-on' : ''}" data-wish="${p.id}" aria-pressed="${w}" aria-label="Guardar en favoritos">${icon.heart}</button>
       <div class="pcard__info"><a class="pcard__name" href="producto.html?id=${p.id}">${esc(p.name)}</a><span class="pcard__price">${SF.money(p.price)}</span></div>
-      <div class="pcard__sub"><span class="swatch" style="background:${p.colors[0].hex}"></span>${esc(p.colors[0].name)} · ${p.sizes[0]}–${p.sizes[p.sizes.length - 1]}</div>
+      <div class="pcard__sub"><span class="swatch" style="background:${p.colors[0].hex}"></span>${esc(p.colors[0].name)}${p.sizes.length ? ` · ${p.sizes[0]}–${p.sizes[p.sizes.length - 1]}` : ''}</div>
     </article>`;
   };
   const head = (title, sub, extra = '') => `<header class="view-head"><div><h1 class="display h-m">${title}</h1>${sub ? `<p class="muted">${sub}</p>` : ''}</div>${extra}</header>`;
@@ -46,38 +45,37 @@
   /* ---------------- Vistas ---------------- */
   const views = {
     inicio() {
-      const f = main.features;
-      const col = (arr, start, side) => `<div class="inside__col inside__col--${side}">${arr.map((x, k) => `<div class="callout" data-f="${start + k}" style="--d:${0.2 + (start + k) * 0.1}s"><b><i>0${start + k + 1}</i>${esc(x.title)}</b><span>${esc(x.text)}</span></div>`).join('')}</div>`;
+      // Catálogo completo: la destacada primero, luego las disponibles y al final las que vienen
+      const list = [...active()].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0)).concat(soon());
       return `
-      <section class="hero2">
-        <div class="hero2__txt">
-          <span class="eyebrow">${esc(main.drop)} · Ya disponible</span>
-          <h1 class="display hero2__title">Conjunto<br>Track <span class="serif">burdeos</span></h1>
-          <p class="muted hero2__desc">${esc(main.description)}</p>
-          <div class="hero2__price">${SF.money(main.price)} <small>Tallas ${main.sizes.join(' · ')}</small></div>
-          <div class="hero2__cta"><a class="btn btn--accent" href="producto.html?id=${main.id}">Comprar ahora ${icon.arrow}</a><button class="btn btn--ghost" data-go="explorar">Explorar</button></div>
+      <section class="story">
+        <div class="story__txt">
+          <span class="eyebrow">Nuestra historia</span>
+          <h1 class="display story__title">SF <span class="serif">Urban</span></h1>
+          <p class="story__lead">Todo comienza con una idea y las mismas ganas de salir adelante, crecer y construir algo propio. Un sueño compartido que hoy empieza a convertirse en realidad gracias al esfuerzo, la dedicación y la ilusión de llegar lejos.</p>
+          <p class="muted">Así nace <strong>SF Urban</strong>, un proyecto que lleva nuestra esencia y el reflejo de nuestros sueños, con el propósito de ofrecerte estilo, actitud y calidad en cada prenda.</p>
+          <p class="story__thanks serif">Gracias por confiar en nosotros y ser parte de esta historia.</p>
+          <a class="btn btn--accent story__cta" href="#catalogo" data-to-catalog>Ver catálogo <span class="story__down" aria-hidden="true">↓</span></a>
         </div>
-        <div class="hero2__fig"><div class="hero2__glow"></div><div class="hero2__ring"></div><img src="${main.images[0]}" alt="${esc(main.name)}"></div>
-      </section>
-
-      <section class="sec" data-reveal>
-        <div class="sec__head"><h2 class="sec__title">Novedades</h2><button class="link-more" data-go="explorar">Ver todo ${icon.arrow}</button></div>
-        <div class="rail">${SF.catalog.slice(0, 6).map(card).join('')}</div>
-      </section>
-
-      <section class="sec" data-reveal>
-        <div class="sec__head"><h2 class="sec__title">Qué hay <span class="serif">dentro</span></h2><span class="muted">Pasa por los puntos</span></div>
-        <div class="inside" data-inside>
-          ${col(f.slice(0, 3), 0, 'l')}
-          <div class="inside__figure"><div class="inside__ring"></div><img src="${main.images[0]}" alt="" loading="lazy">
-            ${f.map((x, i) => `<button class="hotspot" data-f="${i}" style="left:${x.x}%;top:${x.y}%;--d:${0.15 + i * 0.1}s" aria-label="${esc(x.title)}"></button>`).join('')}</div>
-          ${col(f.slice(3), 3, 'r')}
+        <div class="story__fig" data-logo3d aria-hidden="true">
+          <div class="story__glow"></div>
+          <div class="story__orbit story__orbit--a"></div>
+          <div class="story__orbit story__orbit--b"></div>
+          <div class="story__logo">
+            <svg viewBox="240 385 610 440">
+              <polygon class="lp lp1" fill="#F5F5F2" points="338,395 897,395 880,479 321,479"/>
+              <polygon class="lp lp2" fill="#F5F5F2" points="321,479 406,479 388,563 553,563 500,813 250,813 267,731 436,731 453,647 285,647"/>
+              <polygon class="lp lp3" fill="#F5F5F2" points="628,479 713,479 641,813 558,813"/>
+              <polygon class="lp lp4" fill="#E4002B" points="697,556 838,604 677,653"/>
+            </svg>
+          </div>
+          <div class="story__shadow"></div>
         </div>
       </section>
 
-      <section class="sec" data-reveal>
-        <div class="sec__head"><h2 class="sec__title">Categorías</h2></div>
-        <div class="cats">${SF.categories.map(c => { const n = active().filter(p => p.category === c.id).length; return `<button class="cat-row" data-cat-go="${c.id}"><span class="cat-row__name">${esc(c.label)}</span><span class="cat-row__meta">${n ? `${n} ${n === 1 ? 'prenda' : 'prendas'}` : 'Próximamente'}</span>${icon.arrow}</button>`; }).join('')}</div>
+      <section class="sec catalog" id="catalogo">
+        <div class="sec__head"><h2 class="sec__title">Catálogo</h2><span class="muted">${active().length} ${active().length === 1 ? 'prenda disponible' : 'prendas disponibles'}</span></div>
+        <div class="grid2 catalog__grid">${list.map(card).join('')}</div>
       </section>
 
       <section class="sec club" data-reveal>
@@ -277,6 +275,29 @@
   }
   addEventListener('hashchange', () => render());
 
+  /* ---------------- Logo del inicio: se inclina siguiendo el cursor ---------------- */
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('reduce-motion');
+  let tiltRaf = 0;
+  addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse' || reduced()) return;
+    const fig = $('[data-logo3d]', view); if (!fig) return;
+    cancelAnimationFrame(tiltRaf);
+    tiltRaf = requestAnimationFrame(() => {
+      const r = fig.getBoundingClientRect();
+      const x = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (innerWidth / 2)));
+      const y = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / (innerHeight / 2)));
+      fig.style.setProperty('--ry', (x * 18).toFixed(2) + 'deg');
+      fig.style.setProperty('--rx', (-y * 14).toFixed(2) + 'deg');
+    });
+  }, { passive: true });
+
+  // "Ver catálogo": baja suave al catálogo (sin cambiar de vista)
+  view.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-to-catalog]')) return;
+    e.preventDefault();
+    $('#catalogo', view)?.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
+  });
+
   /* ---------------- Interacciones ---------------- */
   view.addEventListener('click', (e) => {
     const t = e.target.closest('[data-go],[data-cat-go],[data-ex-cat],[data-ex-size],[data-notify],[data-auth],[data-ptab],[data-export],[data-delete-account]');
@@ -326,6 +347,12 @@
   // Mantener las vistas al día cuando cambian carrito, favoritos o sesión
   SF.cart.onChange(() => { if (['carrito', 'favoritos', 'perfil'].includes(shown)) render(true); else $$('[data-wish]', view).forEach(b => b.classList.toggle('is-on', SF.wish.has(b.dataset.wish))); });
   SF.auth.onChange(() => { if (['perfil', 'pagos', 'inicio'].includes(shown)) render(true); });
+  // El inventario cambió en la base de datos (desde el panel privado) → se vuelve a pintar
+  addEventListener('sf:catalog', () => {
+    const q = $('[data-ex-q]'), had = q && document.activeElement === q;
+    if (shown === 'explorar' && $('[data-ex-results]')) renderResults(); else render(true);
+    if (had) q.focus();
+  });
 
   render();
 })();

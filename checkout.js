@@ -106,7 +106,9 @@
     // ▶ AQUÍ se conectará la pasarela de pagos:
     //   1) crear pedido en el servidor  2) crear sesión de pago  3) redirigir al proveedor
     //   4) webhook del proveedor actualiza el estado del pedido a "paid".
-    const order = SF.orders.create({ customer: { name: d.name, email: d.email, phone: d.phone }, address, notes: d.notes });
+    let order;
+    try { order = await SF.orders.create({ customer: { name: d.name, email: d.email, phone: d.phone }, address, notes: d.notes }); }
+    catch (ex) { err.textContent = ex.message; btn.disabled = false; return; }
     root.innerHTML = `
       <div class="success" style="padding-top:calc(var(--header-h) + 60px)">
         <div class="success__check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>

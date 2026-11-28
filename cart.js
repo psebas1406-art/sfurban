@@ -71,16 +71,21 @@
   SF.orders = {
     // Crea el pedido en estado "pendiente de pago". La pasarela de pago
     // (Wompi / Mercado Pago / PayU / Stripe…) se conectará en este punto.
-    create({ customer, address, notes }) {
+    async create({ customer, address, notes }) {
       const lines = SF.cart.detailed(); if (!lines.length) throw new Error('Tu carrito está vacío.');
       const t = SF.cart.totals(); const u = SF.auth.user();
-      const order = SF.db.insert('orders', {
-        number: 'SF-' + String(SF.db.all('orders').length + 1001),
+      const draft = {
+        // Número único aunque compren varias personas a la vez (antes era un contador local)
+        number: 'SF-' + Date.now().toString(36).toUpperCase().slice(-6),
         userId: u ? u.id : null, customer, address, notes,
         items: lines.map(l => ({ productId: l.productId, name: l.product.name, size: l.size, qty: l.qty, unitPrice: l.product.price })),
         subtotal: t.subtotal, shipping: t.shipping, total: t.total, currency: SF.config.currency.code,
         status: 'pending_payment', paymentProvider: null,
-      });
+      };
+      // Primero la base de datos (valida precios y stock); si lo rechaza, el carrito no se toca
+      const saved = SF.remote ? await SF.remote.saveOrder(draft) : { ok: true };
+      if (!saved.ok) { SF.remote.refresh(); throw new Error(saved.error); }
+      const order = SF.db.insert('orders', draft);
       SF.track('checkout_order_created', { orderId: order.id, total: order.total });
       SF.cart.clear(); return order;
     },

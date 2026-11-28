@@ -8,15 +8,22 @@
   SF.mountLayout();
 
   const id = new URLSearchParams(location.search).get('id') || 'p-0001';
-  const p = SF.getProduct(id);
   const root = $('[data-pdp]');
+  let shownJson = null, tracked = false;
+
+  // Se pinta al cargar y otra vez si la prenda cambia en la base de datos (precio, stock, fotos…)
+  function show() {
+  const p = SF.getProduct(id);
+  const json = JSON.stringify(p || null);
+  if (json === shownJson) return;
+  shownJson = json;
 
   if (!p || p.status !== 'active') {
     root.innerHTML = `<div class="success" style="padding-top:calc(var(--header-h) + 80px)"><h1 class="display h-m">Esta prenda <span class="serif">aún no llega</span></h1><p class="muted">Estamos preparando nuevas piezas. Mientras tanto, mira lo que ya está disponible.</p><a class="btn btn--accent" href="index.html#explorar">Explorar ${icon.arrow}</a></div>`;
     return;
   }
   document.title = `${p.name} — SF Urban`;
-  SF.track('product_view', { productId: p.id });
+  if (!tracked) { SF.track('product_view', { productId: p.id }); tracked = true; }
 
   let size = null;
   const wish = SF.wish.has(p.id);
@@ -24,7 +31,8 @@
   <div class="pdp">
     <div class="pdp__gallery" data-zoom aria-label="Imagen del producto. Haz clic para ampliar.">
       <div class="ring" aria-hidden="true"></div>
-      <img src="${p.images[0]}" alt="${esc(p.name)}">
+      ${p.images[0] ? `<img src="${p.images[0]}" alt="${esc(p.name)}">` : ''}
+      ${p.images.length > 1 ? `<div class="pdp__thumbs">${p.images.map((u, k) => `<button class="${k ? '' : 'is-on'}" data-thumb="${k}" aria-label="Foto ${k + 1}"><img src="${u}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
     </div>
     <div class="pdp__info">
       <nav class="crumbs" aria-label="Migas de pan"><a href="index.html#inicio">Inicio</a> / <a href="index.html#explorar">Explorar</a> / <span>${esc(p.name)}</span></nav>
@@ -80,8 +88,17 @@
 
   // Zoom que sigue al cursor
   const g = $('[data-zoom]'), img = $('img', g);
+  $$('[data-thumb]').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation(); g.classList.remove('is-zoom');
+    img.src = p.images[+b.dataset.thumb];
+    $$('[data-thumb]').forEach(x => x.classList.toggle('is-on', x === b));
+  }));
+  if (!img) return;
   g.addEventListener('click', () => g.classList.toggle('is-zoom'));
   g.addEventListener('mousemove', (e) => { const r = g.getBoundingClientRect(); img.style.setProperty('--zx', ((e.clientX - r.left) / r.width) * 100 + '%'); img.style.setProperty('--zy', ((e.clientY - r.top) / r.height) * 100 + '%'); });
   g.addEventListener('mouseleave', () => g.classList.remove('is-zoom'));
+  }
 
+  show();
+  addEventListener('sf:catalog', show);
 })();
