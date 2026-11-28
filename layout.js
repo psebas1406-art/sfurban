@@ -276,7 +276,6 @@
       </div>
     </div>
 
-    ${waButton()}
     <div class="toasts" aria-live="polite" data-toasts></div>
     ${cookieBanner()}
 
@@ -289,10 +288,6 @@
     const n = (SF.config.brand.whatsapp || '').replace(/\D/g, '');
     return n ? `https://wa.me/${n}?text=${encodeURIComponent(text)}` : '';
   };
-  function waButton() {
-    const url = SF.whatsappUrl(); if (!url) return '';
-    return `<a class="wa-fab" href="${url}" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp" data-wa>${WA_SVG}<span>WhatsApp</span></a>`;
-  }
   document.addEventListener('click', (e) => { if (e.target.closest('[data-wa]')) SF.track?.('whatsapp_click'); });
 
   /* ---------- Toasts (con acción opcional) ---------- */

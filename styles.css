@@ -582,9 +582,26 @@ html.intro-on:not(.intro-reveal) .chat-btn { opacity: 0; }
 .chat-send:hover { background: var(--accent-2); }
 .chat-send:disabled { opacity: .5; }
 .chat-send svg { width: 18px; height: 18px; }
-.chat-wa { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); border-top: 1px solid var(--line); }
-.chat-wa:hover { color: var(--ink); background: var(--surface); }
-.chat-wa svg { width: 16px; height: 16px; }
+/* "Hablar con el equipo" (WhatsApp) dentro del chat */
+.chat-team { display: flex; align-items: center; gap: 10px; margin: 10px 12px 0; padding: 9px 12px; border-radius: 14px; background: rgba(37,211,102,.1); border: 1px solid rgba(37,211,102,.35); text-decoration: none; color: var(--ink); transition: background-color .2s, border-color .2s; }
+.chat-team:hover { background: rgba(37,211,102,.18); border-color: rgba(37,211,102,.6); }
+.chat-team__ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #25D366; color: #0b3d1f; flex: none; }
+.chat-team__ic svg { width: 20px; height: 20px; }
+.chat-team span:nth-child(2) { flex: 1; display: grid; line-height: 1.25; }
+.chat-team b { font-size: 13.5px; }
+.chat-team small { font-size: 11.5px; color: var(--ink-soft); }
+.chat-team__go { color: #25D366; font-weight: 700; }
+
+/* Fotos en el chat */
+.chat-attach { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); transition: color .2s, border-color .2s; }
+.chat-attach:hover { color: var(--ink); border-color: var(--ink-soft); }
+.chat-attach svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.chat-preview { display: flex; align-items: center; gap: 10px; margin: 0 12px; padding: 8px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 12.5px; color: var(--ink-soft); }
+.chat-preview[hidden] { display: none; }
+.chat-preview img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
+.chat-preview span { flex: 1; }
+.chat-preview button { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); font-size: 16px; color: var(--ink-soft); }
+.msg__img { display: block; width: 100%; max-width: 200px; max-height: 220px; object-fit: cover; border-radius: 10px; margin-bottom: 6px; }
 @media (max-width: 560px) {
   .chat-btn span { display: none; }
   .chat-btn { padding: 0; width: 40px; justify-content: center; }

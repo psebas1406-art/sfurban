@@ -42,7 +42,7 @@ SF.config = {
     // Cada documento tiene versión: si cambia el texto, se sube la versión y se pide aceptarlo de nuevo.
     versions: {
       terminos: 'T&C v1.1 · 2026-11-28',
-      privacidad: 'Privacidad v2.2 · 2026-11-28',
+      privacidad: 'Privacidad v2.3 · 2026-11-28',
       cookies: 'Cookies v1.0 · 2026-11-27',
       reembolsos: 'Reembolsos v1.0 · 2026-11-27',
     },
