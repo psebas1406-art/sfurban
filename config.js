@@ -20,6 +20,31 @@ SF.config = {
   // Asistente de IA (servidor en Render). El chat de la web le habla a {agentUrl}/chat
   agentUrl: 'https://sfurban-agente.onrender.com',
 
+  /* ---------- Legal (Colombia) ----------
+     Identificación del vendedor: la exige el Estatuto del Consumidor (Ley 1480/2011, art. 50)
+     en toda venta por internet. Llenar con los datos REALES del responsable (persona natural
+     o empresa). Mientras diga "[pendiente]", la página lo mostrará así para que no se olvide. */
+  legal: {
+    responsable: 'Neider Sebastián Peña González y María Fernanda Lizarazo Parada',
+    documento: 'C.C. 1099342499',
+    direccion: 'Piedecuesta',
+    ciudad: 'Santander, Colombia',
+    telefono: '312 550 9318 / 15219633472',
+    // Cada documento tiene versión: si cambia el texto, se sube la versión y se pide aceptarlo de nuevo.
+    versions: {
+      terminos: 'T&C v1.0 · 2026-11-27',
+      privacidad: 'Privacidad v2.0 · 2026-11-27',
+      cookies: 'Cookies v1.0 · 2026-11-27',
+      reembolsos: 'Reembolsos v1.0 · 2026-11-27',
+    },
+    docs: {
+      terminos: 'terminos.html',
+      privacidad: 'privacidad.html',
+      cookies: 'cookies.html',
+      reembolsos: 'reembolsos.html',
+    },
+  },
+
   // Intro en video al entrar (una vez por visita). ?intro=1 la fuerza.
   intro: { enabled: true, video: 'sf-urban-intro-web.mp4' },
 

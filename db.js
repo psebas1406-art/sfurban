@@ -39,6 +39,8 @@
   /* Analítica: cada evento queda registrado para el futuro panel
      de estadísticas de las dueñas/dueños (tabla `events`). */
   SF.track = (type, data = {}) => {
+    // Analítica = opcional: solo se mide si la persona lo aceptó en el banner de cookies
+    if (!(SF.consent && SF.consent.cookies.analytics())) return;
     const user = SF.db.kv.get('session');
     SF.db.insert('events', { type, userId: user ? user.userId : null, path: location.pathname, ...data });
   };

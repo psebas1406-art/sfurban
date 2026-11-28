@@ -195,10 +195,31 @@
           : empty('box', 'Sin pedidos todavía', 'Cuando compres, verás aquí el estado de cada pedido.', `<button class="btn btn--ghost" data-go="explorar">Explorar</button>`),
         datos: `<div class="panel"><form class="form" data-profile>
             <label>Nombre<input name="name" value="${esc(u.name)}" required></label>
-            <div class="form-row"><label>Correo<input value="${esc(u.email)}" disabled></label><label>Celular<input name="phone" type="tel" value="${esc(u.phone || '')}"></label></div>
-            <div class="form-row"><label>Cumpleaños<input name="birthdate" type="date" value="${esc(u.birthdate || '')}"></label><span></span></div>
-            <label class="check"><input type="checkbox" name="marketing" ${u.marketing ? 'checked' : ''}> Recibir novedades y descuentos</label>
+            <div class="form-row"><label>Correo<input value="${esc(u.email)}" disabled></label><label>Celular <span class="muted">(opcional, para coordinar entregas)</span><input name="phone" type="tel" value="${esc(u.phone || '')}"></label></div>
             <button class="btn btn--accent" style="justify-self:start">Guardar cambios</button></form></div>`,
+        privacidad: (() => {
+          const hist = SF.consent.history(u.email);
+          const label = { terminos: 'Términos y condiciones', privacidad: 'Tratamiento de datos (Privacidad)', marketing: 'Publicidad por correo', mayoria_edad: 'Mayor de 18 años', cookies_analitica: 'Cookies de analítica' };
+          const where = { registro: 'Registro', checkout: 'Compra', 'banner-cookies': 'Aviso de cookies', perfil: 'Perfil' };
+          return `
+          <div class="panel privacy-pane">
+            <h2>Tus autorizaciones</h2>
+            <label class="set-row"><span><b>Publicidad por correo</b><small>Novedades, lanzamientos y descuentos. Puedes retirarla cuando quieras.</small></span><input type="checkbox" class="switch" data-marketing ${u.marketing ? 'checked' : ''}></label>
+            <label class="set-row"><span><b>Cookies de analítica</b><small>Nos ayuda a saber qué prendas interesan más.</small></span><input type="checkbox" class="switch" data-analytics ${SF.consent.cookies.analytics() ? 'checked' : ''}></label>
+            <h2 class="mt-2">Registro de consentimientos</h2>
+            <p class="legal-note">Cada vez que aceptas o retiras una autorización queda registrada con fecha, hora y versión del documento.</p>
+            ${hist.length ? `<div class="consent-table" role="table">${hist.map(h => `
+              <div class="consent-row" role="row"><span>${new Date(h.at).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}</span><span><b>${esc(label[h.purpose] || h.purpose)}</b><small>${esc(h.docVersion)} · ${esc(where[h.form] || h.form)}</small></span><span class="status ${h.granted ? 'status--ok' : ''}">${h.granted ? 'Aceptó' : 'No / retiró'}</span></div>`).join('')}</div>`
+              : '<p class="muted">Aún no hay registros en este dispositivo.</p>'}
+            <h2 class="mt-2">Tus derechos</h2>
+            <p class="legal-note">Puedes conocer, actualizar, rectificar y suprimir tus datos, o revocar tu autorización (Ley 1581 de 2012). <a href="${SF.config.legal.docs.privacidad}#derechos">Cómo ejercerlos</a></p>
+            <div class="privacy-actions">
+              <button class="btn btn--ghost btn--sm" data-export>Descargar mis datos</button>
+              <a class="btn btn--ghost btn--sm" href="mailto:${esc(SF.config.brand.email)}?subject=${encodeURIComponent('Solicitud de datos personales - SF Urban')}">Escribir una solicitud</a>
+              <button class="btn btn--ghost btn--sm btn--danger" data-delete-account>Eliminar mi cuenta</button>
+            </div>
+          </div>`;
+        })(),
         direccion: `<div class="panel"><form class="form" data-address>
             <label>Dirección<input name="line1" value="${esc(a.line1 || '')}" autocomplete="address-line1"></label>
             <label>Apartamento, barrio, referencias<input name="line2" value="${esc(a.line2 || '')}" autocomplete="address-line2"></label>
@@ -212,7 +233,7 @@
           <button class="btn btn--ghost btn--sm" data-logout>${icon.logout} Salir</button>
         </div>
         <div class="me__stats"><div><b>${orders.length}</b><span>Pedidos</span></div><div><b>${SF.wish.list().length}</b><span>Favoritos</span></div><div><b>${SF.cart.count()}</b><span>En carrito</span></div></div>
-        <div class="seg" role="tablist">${[['pedidos', 'Pedidos'], ['datos', 'Mis datos'], ['direccion', 'Dirección']].map(([k, l]) => `<button role="tab" class="${tab === k ? 'is-on' : ''}" data-ptab="${k}">${l}</button>`).join('')}</div>
+        <div class="seg" role="tablist">${[['pedidos', 'Pedidos'], ['datos', 'Mis datos'], ['direccion', 'Dirección'], ['privacidad', 'Privacidad']].map(([k, l]) => `<button role="tab" class="${tab === k ? 'is-on' : ''}" data-ptab="${k}">${l}</button>`).join('')}</div>
         ${panes[tab]}`;
     },
   };
@@ -258,8 +279,21 @@
 
   /* ---------------- Interacciones ---------------- */
   view.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-go],[data-cat-go],[data-ex-cat],[data-ex-size],[data-notify],[data-auth],[data-ptab]');
+    const t = e.target.closest('[data-go],[data-cat-go],[data-ex-cat],[data-ex-size],[data-notify],[data-auth],[data-ptab],[data-export],[data-delete-account]');
     if (!t) return;
+    if (t.matches('[data-export]')) {
+      const data = SF.auth.exportData(); if (!data) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      a.download = `mis-datos-sfurban-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      return;
+    }
+    if (t.matches('[data-delete-account]')) {
+      if (!confirm('¿Eliminar tu cuenta? Se borran tus datos, pedidos y favoritos de este dispositivo y retiras tu autorización. No se puede deshacer.')) return;
+      SF.auth.deleteAccount().then(() => { SF.toast('Tu cuenta fue eliminada'); SF.goView('inicio'); });
+      return;
+    }
     if (t.matches('[data-go]')) SF.goView(t.dataset.go);
     else if (t.matches('[data-cat-go]')) { ex.cat = t.dataset.catGo; SF.goView('explorar'); }
     else if (t.matches('[data-ex-cat]')) { ex.cat = t.dataset.exCat; $$('[data-ex-cat]').forEach(b => b.classList.toggle('is-on', b === t)); renderResults(); SF.track('filter', { category: ex.cat }); }
@@ -280,10 +314,12 @@
   view.addEventListener('change', (e) => {
     if (e.target.matches('[data-ex-sort]')) { ex.sort = e.target.value; renderResults(); }
     if (e.target.matches('[data-ex-soon]')) { ex.soon = e.target.checked; renderResults(); }
+    if (e.target.matches('[data-marketing]')) SF.auth.setMarketing(e.target.checked).then(() => SF.toast(e.target.checked ? 'Autorizaste recibir novedades' : 'Ya no te enviaremos publicidad', 'info'));
+    if (e.target.matches('[data-analytics]')) SF.consent.cookies.set(e.target.checked, 'interruptor en el perfil').then(() => { SF.toast('Preferencia de cookies actualizada', 'info'); render(true); });
   });
   view.addEventListener('submit', (e) => {
     const f = e.target; e.preventDefault();
-    if (f.matches('[data-profile]')) { SF.auth.updateProfile({ name: f.name.value.trim() || SF.auth.user().name, phone: f.phone.value, birthdate: f.birthdate.value, marketing: f.marketing.checked }); SF.toast('Datos guardados ✓'); }
+    if (f.matches('[data-profile]')) { SF.auth.updateProfile({ name: f.name.value.trim() || SF.auth.user().name, phone: f.phone.value }); SF.toast('Datos guardados ✓'); }
     if (f.matches('[data-address]')) { SF.auth.updateProfile({ address: { line1: f.line1.value, line2: f.line2.value, city: f.city.value, region: f.region.value } }); SF.toast('Dirección guardada ✓'); }
   });
 

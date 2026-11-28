@@ -26,14 +26,28 @@
       const { passHash, salt, ...safe } = u; return safe;
     },
 
-    async register({ name, email, password, phone = '', birthdate = '', marketing = false }) {
+    // Datos mínimos: solo nombre, correo y contraseña. (Celular y dirección se piden al comprar, porque ahí sí se necesitan.)
+    async register({ name, email, password, terms, privacy, adult, marketing = false }) {
       name = (name || '').trim(); email = (email || '').trim().toLowerCase();
       if (name.length < 2) throw new Error('Escribe tu nombre.');
       if (!emailOk(email)) throw new Error('Ese correo no parece válido.');
       if ((password || '').length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+      if (!terms) throw new Error('Para crear la cuenta debes aceptar los Términos y condiciones.');
+      if (!privacy) throw new Error('Para crear la cuenta debes autorizar el tratamiento de datos (Política de privacidad).');
+      if (!adult) throw new Error('Debes ser mayor de 18 años para crear una cuenta.');
       if (SF.db.where('users', u => u.email === email).length) throw new Error('Ya existe una cuenta con ese correo. Inicia sesión.');
       const salt = crypto.getRandomValues(new Uint32Array(2)).join('-');
-      const user = SF.db.insert('users', { name, email, phone, birthdate, marketing, salt, passHash: await hash(password, salt), role: 'customer' });
+      const user = SF.db.insert('users', { name, email, marketing: !!marketing, salt, passHash: await hash(password, salt), role: 'customer' });
+      // Prueba de la autorización: cada casilla por separado
+      await SF.consent.record({
+        form: 'registro', email, userId: user.id,
+        items: [
+          { purpose: 'terminos', granted: true },
+          { purpose: 'privacidad', granted: true },
+          { purpose: 'mayoria_edad', granted: true },
+          { purpose: 'marketing', granted: !!marketing },
+        ],
+      });
       SF.db.kv.set('session', { userId: user.id, at: Date.now() });
       SF.cart.mergeGuest();
       SF.track('sign_up', { method: 'email' });
@@ -54,9 +68,40 @@
 
     updateProfile(patch) {
       const u = SF.auth.user(); if (!u) return null;
-      const allowed = ['name', 'phone', 'birthdate', 'marketing', 'address'];
+      const allowed = ['name', 'phone', 'address'];
       const clean = Object.fromEntries(Object.entries(patch).filter(([k]) => allowed.includes(k)));
       SF.db.update('users', u.id, clean); emit(); return SF.auth.user();
+    },
+
+    /** Autorizar o retirar el envío de publicidad (queda registrado). */
+    async setMarketing(on) {
+      const u = SF.auth.user(); if (!u) return;
+      SF.db.update('users', u.id, { marketing: !!on });
+      await SF.consent.record({ form: 'perfil', method: 'interruptor en el perfil', email: u.email, userId: u.id, items: [{ purpose: 'marketing', granted: !!on }] });
+      emit();
+    },
+
+    /** Copia de todos los datos que la tienda tiene de esta persona (derecho de acceso). */
+    exportData() {
+      const u = SF.auth.user(); if (!u) return null;
+      return {
+        generado: new Date().toISOString(),
+        cuenta: u,
+        pedidos: SF.db.where('orders', o => o.userId === u.id),
+        favoritos: SF.wish.list(),
+        consentimientos: SF.consent.history(u.email),
+      };
+    },
+
+    /** Supresión: borra la cuenta y sus datos de este dispositivo. Los registros de
+        consentimiento se conservan (son la prueba legal) y se anota el retiro. */
+    async deleteAccount() {
+      const u = SF.auth.user(); if (!u) return;
+      await SF.consent.record({ form: 'perfil', method: 'botón eliminar cuenta', email: u.email, userId: u.id, items: [{ purpose: 'privacidad', granted: false }, { purpose: 'marketing', granted: false }] });
+      SF.db.where('orders', o => o.userId === u.id).forEach(o => SF.db.remove('orders', o.id));
+      SF.db.remove('users', u.id);
+      SF.db.kv.del('cart:' + u.id); SF.db.kv.del('wish:' + u.id); SF.db.kv.del('session');
+      emit();
     },
 
     // Demo: en producción se envía un correo con enlace seguro.

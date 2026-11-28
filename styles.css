@@ -511,7 +511,65 @@ details.acc p { color: var(--ink-soft); }
 .success__check { width: 84px; height: 84px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; animation: fadeIn .6s var(--ease-spring); }
 .success__check svg { width: 40px; height: 40px; stroke-width: 2.4; }
 
+/* ---------- Casillas legales y avisos ---------- */
+.form .check--legal { align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.45; }
+.form .check--legal input { margin-top: 2px; flex: none; }
+.check--legal a, .legal-note a, .notice a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; font-weight: 600; }
+.legal-note { font-size: 12.5px; color: var(--ink-soft); margin: 0; line-height: 1.5; }
+.notice--soft { border-left-color: var(--surface-2); }
+.btn--danger { --c: #ff8095; }
+.status--ok { background: rgba(70, 180, 110, .18); color: #8fe0a9; }
+
+/* ---------- Aviso de cookies ---------- */
+.cookie-banner { position: fixed; left: 16px; right: 16px; bottom: calc(var(--dock-space) + env(safe-area-inset-bottom)); z-index: 96; max-width: 760px; margin: 0 auto; display: flex; gap: 16px; align-items: center; padding: 16px 18px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); box-shadow: 0 30px 70px -20px #000; animation: fadeIn .4s var(--ease-out); }
+.cookie-banner[hidden] { display: none; }
+.cookie-banner__txt { flex: 1; font-size: 13px; }
+.cookie-banner__txt p { margin: 4px 0 0; color: var(--ink-soft); line-height: 1.5; }
+.cookie-banner__txt a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); }
+.cookie-banner__actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; flex: none; }
+.modal__card--narrow { grid-template-columns: 1fr; width: min(480px, 100%); }
+.cookie-title { font-size: 18px; margin: 0 0 14px; }
+.cookie-modal__actions { display: flex; gap: 8px; justify-content: flex-end; margin: 14px 0 12px; flex-wrap: wrap; }
+html.intro-on:not(.intro-reveal) .cookie-banner { display: none; }
+@media (max-width: 700px) {
+  .cookie-banner { flex-direction: column; align-items: stretch; left: 8px; right: 8px; }
+  .cookie-banner__actions { justify-content: stretch; }
+  .cookie-banner__actions .btn { flex: 1; }
+}
+
+/* ---------- Pie legal ---------- */
+.footer-legal { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin: 8px 0 6px; }
+.footer-legal a, .footer-legal button { font-size: 12.5px; color: var(--ink-soft); text-decoration: none; }
+.footer-legal a:hover, .footer-legal button:hover { color: var(--ink); }
+.footer-sic { font-size: 11.5px; line-height: 1.6; max-width: 640px; }
+/* Datos del vendedor: disponibles (Ley 1480 art. 50) pero discretos, plegados y en letra pequeña */
+.footer-id { font-size: 10.5px; line-height: 1.6; max-width: 640px; opacity: .55; }
+.footer-id summary { cursor: pointer; list-style: none; text-decoration: underline; text-underline-offset: 2px; }
+.footer-id summary::-webkit-details-marker { display: none; }
+.footer-id[open] { opacity: .8; }
+.footer-id p { margin-top: 4px; }
+.footer-sic a { text-decoration: underline; }
+.is-pending { color: #ffb84d; font-weight: 600; }
+
+/* ---------- Perfil → Privacidad ---------- */
+.privacy-pane h2 { margin-bottom: 8px; }
+.consent-table { display: grid; gap: 2px; margin-top: 10px; max-height: 320px; overflow: auto; }
+.consent-row { display: grid; grid-template-columns: 150px 1fr auto; gap: 12px; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.consent-row small { display: block; color: var(--ink-soft); font-size: 11.5px; }
+.privacy-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.chat-legal { margin: 0; padding: 0 14px 10px; font-size: 11px; line-height: 1.45; color: var(--ink-soft); }
+.chat-legal a { color: var(--ink); text-decoration: underline; }
+@media (max-width: 560px) { .consent-row { grid-template-columns: 1fr auto; } .consent-row > span:first-child { grid-column: 1 / -1; color: var(--ink-soft); font-size: 11.5px; } }
+
 /* ---------- Páginas legales ---------- */
+.legal__summary { padding: 14px 16px; border-radius: 12px; background: var(--surface); border-left: 3px solid var(--accent); }
+.legal__id { list-style: none; padding: 0 !important; }
+.legal__table { display: grid; gap: 0; margin: 10px 0 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 13.5px; }
+.legal__table > div { display: grid; grid-template-columns: 1fr 1.4fr 1.6fr; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.legal__table > div:last-child { border-bottom: 0; }
+.legal__table > div:first-child { background: var(--surface); color: var(--ink); }
+@media (max-width: 640px) { .legal__table > div { grid-template-columns: 1fr; gap: 2px; } .legal__table > div:first-child { display: none; } .legal__table span:first-child { font-weight: 700; color: var(--ink); } }
+.legal__body ol { padding-left: 20px; display: grid; gap: 6px; }
 .legal { max-width: 760px; }
 .legal__body { font-size: 15px; line-height: 1.7; color: #d9d9d4; padding-bottom: 40px; }
 .legal__body h2 { font-family: var(--f-display); font-size: 16px; text-transform: uppercase; color: var(--ink); margin: 34px 0 10px; letter-spacing: -.01em; }

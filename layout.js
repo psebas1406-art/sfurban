@@ -94,13 +94,68 @@
   }
 
   function footer() {
-    const b = SF.config.brand;
+    const b = SF.config.brand, L = SF.config.legal;
     return `
     <footer class="site-footer">
       ${SF.isoSVG}
       <p class="serif">${esc(b.motto)}</p>
-      <p>© ${new Date().getFullYear()} ${esc(b.name)} · <a href="mailto:${esc(b.email)}">${esc(b.email)}</a> · <a href="privacidad.html">Política de privacidad</a></p>
+      <nav class="footer-legal" aria-label="Información legal">
+        <a href="${L.docs.terminos}">Términos y condiciones</a>
+        <a href="${L.docs.privacidad}">Política de privacidad</a>
+        <a href="${L.docs.cookies}">Política de cookies</a>
+        <a href="${L.docs.reembolsos}">Cambios, devoluciones y reembolsos</a>
+        <button type="button" data-cookie-settings>Preferencias de cookies</button>
+      </nav>
+      <details class="footer-id">
+        <summary>Datos del vendedor</summary>
+        <p>Responsables: ${esc(L.responsable)} · ${esc(L.documento)}<br>
+          ${esc(L.direccion)}, ${esc(L.ciudad)} · Tel. ${esc(L.telefono)} · ${esc(b.email)}</p>
+      </details>
+      <p class="footer-sic">Si tienes una queja y no la resolvemos, puedes acudir a la <a href="https://www.sic.gov.co" target="_blank" rel="noopener">Superintendencia de Industria y Comercio (SIC)</a>.</p>
+      <p>© ${new Date().getFullYear()} ${esc(b.name)}</p>
     </footer>`;
+  }
+
+  /* ---------- Banner de cookies (consentimiento previo, rechazar tan fácil como aceptar) ---------- */
+  function cookieBanner() {
+    return `
+    <div class="cookie-banner" data-cookie-banner hidden role="dialog" aria-live="polite" aria-label="Cookies y almacenamiento">
+      <div class="cookie-banner__txt">
+        <strong>Tu privacidad 🍪</strong>
+        <p>Usamos almacenamiento <b>necesario</b> para que la tienda funcione (carrito, sesión, preferencias). Con tu permiso, también <b>analítica propia</b> para saber qué prendas interesan más. No usamos publicidad ni rastreo de terceros. <a href="${SF.config.legal.docs.cookies}">Política de cookies</a></p>
+      </div>
+      <div class="cookie-banner__actions">
+        <button class="btn btn--ghost btn--sm" data-cookie-choice="reject">Solo necesarias</button>
+        <button class="btn btn--ghost btn--sm" data-cookie-settings>Configurar</button>
+        <button class="btn btn--accent btn--sm" data-cookie-choice="accept">Aceptar todas</button>
+      </div>
+    </div>
+    <div class="modal" id="cookieModal" role="dialog" aria-modal="true" aria-labelledby="cookieTitle" aria-hidden="true">
+      <div class="modal__card modal__card--narrow">
+        <button class="icon-btn modal__x" data-cookie-close aria-label="Cerrar">${icon.close}</button>
+        <div class="auth-main">
+          <h3 id="cookieTitle" class="cookie-title">Preferencias de cookies</h3>
+          <label class="set-row"><span><b>Necesarias</b><small>Carrito, sesión, favoritos, preferencias de la web y este mismo aviso. Siempre activas.</small></span><input type="checkbox" class="switch" checked disabled></label>
+          <label class="set-row"><span><b>Analítica propia</b><small>Páginas y prendas vistas, búsquedas y uso del chat, para mejorar la tienda. No se comparte con terceros.</small></span><input type="checkbox" class="switch" data-cookie-analytics></label>
+          <div class="cookie-modal__actions">
+            <button class="btn btn--ghost btn--sm" data-cookie-choice="reject">Rechazar opcionales</button>
+            <button class="btn btn--accent btn--sm" data-cookie-save>Guardar mi elección</button>
+          </div>
+          <p class="legal-note">Puedes cambiar esto cuando quieras desde el pie de página o en Ajustes. <a href="${SF.config.legal.docs.cookies}">Más información</a></p>
+        </div>
+      </div>
+    </div>`;
+  }
+  function showCookieBanner(show) { const b = $('[data-cookie-banner]'); if (b) b.hidden = !show; }
+  function openCookieModal() {
+    const m = $('#cookieModal'); $('[data-cookie-analytics]', m).checked = SF.consent.cookies.analytics();
+    closeSettings(); m.classList.add('is-open'); m.setAttribute('aria-hidden', 'false'); showScrim();
+  }
+  function closeCookieModal() { const m = $('#cookieModal'); if (!m.classList.contains('is-open')) return; m.classList.remove('is-open'); m.setAttribute('aria-hidden', 'true'); hideScrim(); }
+  async function chooseCookies(analytics, method) {
+    await SF.consent.cookies.set(analytics, method);
+    showCookieBanner(false); closeCookieModal();
+    SF.toast(analytics ? 'Preferencias guardadas: analítica activada' : 'Preferencias guardadas: solo lo necesario', 'info');
   }
 
   /* ---------- Panel de ajustes ---------- */
@@ -134,11 +189,14 @@
           <button class="set-row set-row--link" data-chat><b>Chatear con nosotros</b>${icon.chat}</button>
           <a class="set-row set-row--link" href="mailto:${esc(SF.config.brand.email)}"><b>Escribir un correo</b>${icon.arrow}</a>
           <button class="set-row set-row--link" data-soon="Guía de tallas"><b>Guía de tallas</b>${icon.arrow}</button>
-          <button class="set-row set-row--link" data-soon="Envíos y cambios"><b>Envíos y cambios</b>${icon.arrow}</button>
+          <a class="set-row set-row--link" href="${SF.config.legal.docs.reembolsos}"><b>Envíos, cambios y devoluciones</b>${icon.arrow}</a>
         </section>
         <section><h3>Privacidad</h3>
           <button class="set-row set-row--link set-row--danger" data-wipe><b>Borrar mis datos de este dispositivo</b>${icon.close}</button>
-          <a class="set-row set-row--link" href="privacidad.html"><b>Política de privacidad</b>${icon.arrow}</a>
+          <button class="set-row set-row--link" data-cookie-settings><b>Preferencias de cookies</b>${icon.arrow}</button>
+          <a class="set-row set-row--link" href="${SF.config.legal.docs.privacidad}"><b>Política de privacidad</b>${icon.arrow}</a>
+          <a class="set-row set-row--link" href="${SF.config.legal.docs.terminos}"><b>Términos y condiciones</b>${icon.arrow}</a>
+          <a class="set-row set-row--link" href="${SF.config.legal.docs.reembolsos}"><b>Cambios, devoluciones y reembolsos</b>${icon.arrow}</a>
         </section>
         <p class="settings__foot">${SF.isoSVG}<span>SF Urban · v0.3</span></p>
       </div>`;
@@ -156,6 +214,15 @@
     hideScrim();
   }
   SF.applyPrefs = () => document.documentElement.classList.toggle('reduce-motion', !!pref.get('reduceMotion', false));
+
+  /** Casillas legales obligatorias, separadas y SIN marcar, cada una con su enlace. */
+  function legalChecks() {
+    return `
+      ${SF.consent.checkbox('terminos', { linkText: 'Términos y condiciones' })}
+      ${SF.consent.checkbox('privacidad', { linkText: 'Política de privacidad' })}
+      ${SF.consent.checkbox('mayoria_edad')}`;
+  }
+  SF.legalChecks = legalChecks;
 
   function overlays() {
     return `
@@ -182,13 +249,10 @@
           <form class="form" data-auth-form="register" novalidate hidden>
             <label>Nombre<input name="name" autocomplete="name" required></label>
             <label>Correo<input name="email" type="email" autocomplete="email" required></label>
-            <div class="form-row">
-              <label>Celular <span class="muted">(opcional)</span><input name="phone" type="tel" autocomplete="tel"></label>
-              <label>Cumpleaños <span class="muted">(opcional)</span><input name="birthdate" type="date"></label>
-            </div>
             <label>Contraseña<input name="password" type="password" autocomplete="new-password" minlength="8" required><small class="muted">Mínimo 8 caracteres.</small></label>
-            <label class="check"><input type="checkbox" name="marketing" checked> Quiero enterarme de drops y descuentos</label>
-            <label class="check"><input type="checkbox" name="terms" required> Acepto términos y política de privacidad</label>
+            ${legalChecks()}
+            ${SF.consent.checkbox('marketing', { required: false })}
+            <p class="legal-note">Solo te pedimos lo necesario para tu cuenta. Celular y dirección se piden al comprar. <a href="${SF.config.legal.docs.privacidad}" target="_blank" rel="noopener">¿Cómo usamos tus datos?</a></p>
             <p class="form-error" data-error></p>
             <button class="btn btn--accent btn--block" type="submit">Crear cuenta</button>
           </form>
@@ -204,6 +268,7 @@
     </div>
 
     <div class="toasts" aria-live="polite" data-toasts></div>
+    ${cookieBanner()}
 
     ${SF.chat ? SF.chat.markup() : ''}`;
   }
@@ -234,6 +299,7 @@
     m.classList.remove('is-open'); m.setAttribute('aria-hidden', 'true');
     closeSettings();
     if (wasOpen) hideScrim();
+    closeCookieModal();
     if (!silent && lastFocus) lastFocus.focus();
   };
 
@@ -270,8 +336,10 @@
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     try {
       if (type === 'register') {
-        if (!f.terms.checked) throw new Error('Debes aceptar los términos.');
-        const u = await SF.auth.register({ ...data, marketing: f.marketing.checked });
+        const u = await SF.auth.register({
+          name: data.name, email: data.email, password: data.password,
+          terms: f.c_terminos.checked, privacy: f.c_privacidad.checked, adult: f.c_mayoria_edad.checked, marketing: f.c_marketing.checked,
+        });
         SF.closeAll(); SF.toast(`¡Bienvenid@ al club, ${u.name.split(' ')[0]}!`);
       } else if (type === 'login') {
         const u = await SF.auth.login(data); SF.closeAll(); SF.toast(`Hola de nuevo, ${u.name.split(' ')[0]} 👋`);
@@ -321,11 +389,23 @@
       pref.set(s.dataset.pref, s.checked); SF.applyPrefs();
     });
     addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { SF.closeAll(); SF.chat && SF.chat.close(); }
+      if (e.key === 'Escape') { SF.closeAll(); closeCookieModal(); SF.chat && SF.chat.close(); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); SF.goView('explorar'); }
     });
     $$('[data-auth-form]').forEach(f => f.addEventListener('submit', onAuthSubmit));
     if (SF.chat) SF.chat.bind();
+
+    // Cookies: el aviso aparece hasta que la persona decide; nada opcional se activa antes.
+    document.addEventListener('click', (e) => {
+      const c = e.target.closest('[data-cookie-choice],[data-cookie-settings],[data-cookie-save],[data-cookie-close]');
+      if (!c) return;
+      if (c.matches('[data-cookie-settings]')) openCookieModal();
+      else if (c.matches('[data-cookie-close]')) closeCookieModal();
+      else if (c.matches('[data-cookie-save]')) chooseCookies($('[data-cookie-analytics]').checked, 'botón guardar en preferencias de cookies');
+      else chooseCookies(c.dataset.cookieChoice === 'accept', c.dataset.cookieChoice === 'accept' ? 'botón "Aceptar todas" del aviso de cookies' : 'botón "Solo necesarias / Rechazar" del aviso de cookies');
+    });
+    showCookieBanner(SF.consent.cookies.get() === null);
+    SF.consent.flush();
 
     SF.cart.onChange(updateBadges); SF.auth.onChange(updateBadges);
     updateBadges(); SF.reveal();

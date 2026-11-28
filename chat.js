@@ -70,10 +70,10 @@
     let answer;
     try {
       const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 95000);
-      const u = SF.auth.user();
+      // Datos mínimos: solo el mensaje y un identificador de conversación (ni nombre ni correo)
       const res = await fetch(SF.config.agentUrl + '/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal,
-        body: JSON.stringify({ session: session(), message: text, name: u ? u.name : '' }),
+        body: JSON.stringify({ session: session(), message: text }),
       });
       clearTimeout(to);
       const data = await res.json().catch(() => ({}));
@@ -110,6 +110,7 @@
           <input data-chat-input type="text" maxlength="800" placeholder="Escribe tu pregunta…" aria-label="Mensaje" autocomplete="off">
           <button class="chat-send" data-chat-send aria-label="Enviar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 10 14M21 4l-6.5 16-3.5-6.5L4.5 10z"/></svg></button>
         </form>
+        <p class="chat-legal">Asistente automático con IA (Claude, de Anthropic). Tus mensajes se procesan para responderte; no compartas datos sensibles ni de pago. <a href="${SF.config.legal.docs.privacidad}#chat" target="_blank" rel="noopener">Privacidad</a></p>
         ${wa ? `<a class="chat-wa" href="https://wa.me/${wa}?text=${encodeURIComponent('Hola SF Urban 👋')}" target="_blank" rel="noopener">${icon.chat} Hablar por WhatsApp con una persona</a>` : ''}
       </div>`;
     },

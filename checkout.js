@@ -12,7 +12,7 @@
   function render() {
     const lines = SF.cart.detailed();
     if (!lines.length) {
-      root.innerHTML = `<div class="success" style="padding-top:calc(var(--header-h) + 80px)"><div class="empty__icon">${icon.cart}</div><h1 class="display h-m">Tu carrito está <span class="serif">vacía</span></h1><a class="btn btn--accent" href="index.html#explorar">Explorar ${icon.arrow}</a></div>`;
+      root.innerHTML = `<div class="success" style="padding-top:calc(var(--header-h) + 80px)"><div class="empty__icon">${icon.cart}</div><h1 class="display h-m">Tu carrito está <span class="serif">vacío</span></h1><a class="btn btn--accent" href="index.html#explorar">Explorar ${icon.arrow}</a></div>`;
       return;
     }
     const u = SF.auth.user() || {}; const a = u.address || {}; const t = SF.cart.totals();
@@ -41,7 +41,8 @@
                 <label>Departamento / Estado<input name="region" autocomplete="address-level1" value="${esc(a.region || '')}" required></label>
               </div>
               <label>Notas del pedido <span class="muted">(opcional)</span><textarea name="notes"></textarea></label>
-              ${u.id ? '<label class="check"><input type="checkbox" name="save" checked> Guardar esta dirección en mi cuenta</label>' : ''}
+              ${u.id ? '<label class="check"><input type="checkbox" name="save"> Guardar esta dirección en mi cuenta para próximas compras (opcional)</label>' : ''}
+              <p class="legal-note">Usamos estos datos solo para entregarte el pedido y contactarte sobre él.</p>
             </div>
           </div>
           <div class="panel">
@@ -53,6 +54,11 @@
               <div class="pay-opt">💬 Coordinar por WhatsApp<small>Próximamente</small></div>
             </div>
             <p class="notice" style="margin-top:14px">Los pagos en línea se activarán pronto. Por ahora tu pedido queda <strong>reservado</strong> y te contactamos para completarlo.</p>
+          </div>
+          <div class="panel">
+            <h2><i>4</i>Confirmación</h2>
+            <p class="notice notice--soft">Tienes <strong>5 días hábiles</strong> desde que recibes tu pedido para retractarte de la compra (Ley 1480 de 2011, art. 47), además de la garantía legal. Detalles en <a href="${SF.config.legal.docs.reembolsos}" target="_blank" rel="noopener">Cambios, devoluciones y reembolsos</a>.</p>
+            <div class="form" style="gap:10px;margin-top:12px">${SF.legalChecks()}</div>
           </div>
           <p class="form-error" data-error></p>
           <button class="btn btn--accent btn--block" type="submit">Reservar pedido · ${SF.money(t.total)}</button>
@@ -70,6 +76,7 @@
             <div class="sum-row"><span>Subtotal</span><span>${SF.money(t.subtotal)}</span></div>
             <div class="sum-row muted"><span>Envío</span><span>${t.shipping ? SF.money(t.shipping) : 'Gratis'}</span></div>
             <div class="sum-row sum-row--total"><span>Total</span><span>${SF.money(t.total)}</span></div>
+            <p class="legal-note">Precios en pesos colombianos (COP), con impuestos incluidos. El total es lo único que pagas.</p>
           </div>
         </aside>
       </div>`;
@@ -77,14 +84,24 @@
     $('[data-form]').addEventListener('submit', onSubmit);
   }
 
-  function onSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault(); const f = e.target; const err = $('[data-error]'); err.textContent = '';
-    const bad = [...f.querySelectorAll('[required]')].find(i => !i.value.trim());
+    const bad = [...f.querySelectorAll('input[required]:not([type=checkbox]), textarea[required]')].find(i => !i.value.trim());
     if (bad) { err.textContent = 'Completa los campos obligatorios.'; bad.focus(); return; }
     const d = Object.fromEntries(new FormData(f));
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email)) { err.textContent = 'Revisa el correo.'; f.email.focus(); return; }
+    if (!f.c_terminos.checked) { err.textContent = 'Para reservar debes aceptar los Términos y condiciones.'; f.c_terminos.focus(); return; }
+    if (!f.c_privacidad.checked) { err.textContent = 'Para reservar debes autorizar el tratamiento de tus datos (Política de privacidad).'; f.c_privacidad.focus(); return; }
+    if (!f.c_mayoria_edad.checked) { err.textContent = 'Debes ser mayor de 18 años para comprar.'; f.c_mayoria_edad.focus(); return; }
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    const u0 = SF.auth.user();
+    // Prueba de la autorización, ligada al correo del pedido
+    await SF.consent.record({
+      form: 'checkout', email: d.email.trim().toLowerCase(), userId: u0?.id || null,
+      items: [{ purpose: 'terminos', granted: true }, { purpose: 'privacidad', granted: true }, { purpose: 'mayoria_edad', granted: true }],
+    });
     const address = { line1: d.line1, line2: d.line2, city: d.city, region: d.region };
-    if (d.save && SF.auth.user()) SF.auth.updateProfile({ address, phone: d.phone });
+    if (d.save && u0) SF.auth.updateProfile({ address, phone: d.phone });
 
     // ▶ AQUÍ se conectará la pasarela de pagos:
     //   1) crear pedido en el servidor  2) crear sesión de pago  3) redirigir al proveedor
