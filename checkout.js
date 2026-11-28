@@ -74,6 +74,7 @@
           </div>`).join('')}
           <div style="display:grid;gap:8px;margin-top:16px">
             <div class="sum-row"><span>Subtotal</span><span>${SF.money(t.subtotal)}</span></div>
+            ${t.discount ? `<div class="sum-row sum-row--loyal"><span>${SF.isoSVG} Tarjeta SF Club · 60%</span><span>−${SF.money(t.discount)}</span></div>` : ''}
             <div class="sum-row muted"><span>Envío</span><span>${t.shipping ? SF.money(t.shipping) : 'Gratis'}</span></div>
             <div class="sum-row sum-row--total"><span>Total</span><span>${SF.money(t.total)}</span></div>
             <p class="legal-note">Precios en pesos colombianos (COP), con impuestos incluidos. El total es lo único que pagas.</p>

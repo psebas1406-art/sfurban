@@ -179,6 +179,7 @@
         </section>
         <section><h3>Experiencia</h3>
           ${toggle('reduceMotion', false, 'Reducir animaciones', 'Menos movimiento en la página')}
+          ${toggle('uiSound', true, 'Sonidos de la interfaz', 'Por ejemplo, al abrir tu tarjeta SF Club')}
         </section>
         <section><h3>Cuenta</h3>
           <a class="set-row set-row--link" href="index.html#perfil" data-settings-close><b>${u ? 'Mi perfil' : 'Iniciar sesión o registrarme'}</b>${icon.arrow}</a>

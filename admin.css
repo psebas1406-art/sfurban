@@ -110,6 +110,8 @@ input[type=color].input { padding: 4px; min-height: 44px; cursor: pointer; }
 .order__head b { font-family: Unbounded, sans-serif; font-size: 14px; }
 .order ul { margin: 0; padding-left: 18px; }
 .order .select { max-width: 220px; }
+.loyal-note { padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(228,0,43,.5); background: rgba(228,0,43,.08); }
+.loyal-note b { color: #ff6b81; }
 
 /* ---------- Tablas ---------- */
 .tbl-wrap { overflow-x: auto; border-radius: var(--r); border: 1px solid var(--line); }

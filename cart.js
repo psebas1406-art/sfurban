@@ -39,10 +39,13 @@
       return SF.cart.items().map(i => { const p = SF.getProduct(i.productId); return p ? { ...i, product: p, lineTotal: p.price * i.qty } : null; }).filter(Boolean);
     },
     totals() {
-      const subtotal = SF.cart.detailed().reduce((a, l) => a + l.lineTotal, 0);
+      const lines = SF.cart.detailed();
+      const subtotal = lines.reduce((a, l) => a + l.lineTotal, 0);
+      const loyal = SF.loyalty.discountFor(lines);
+      const net = subtotal - loyal.discount;
       const { flat, freeFrom } = SF.config.shipping;
-      const shipping = subtotal === 0 || subtotal >= freeFrom ? 0 : flat;
-      return { subtotal, shipping, total: subtotal + shipping, freeFrom, missingForFree: Math.max(0, freeFrom - subtotal) };
+      const shipping = net <= 0 || net >= freeFrom ? 0 : flat;
+      return { subtotal, discount: loyal.discount, discountedUnits: loyal.units, shipping, total: net + shipping, freeFrom, missingForFree: Math.max(0, freeFrom - net) };
     },
 
     mergeGuest() {
@@ -68,6 +71,29 @@
     },
   };
 
+  /* ---------- Tarjeta de fidelidad ----------
+     Cada prenda comprada = 1 sello. Por cada 9 prendas, la 10.ª tiene 60 % de descuento.
+     Solo para clientes con cuenta (la tarjeta va a su nombre). El descuento se aplica
+     solo en el carrito, sobre la(s) prenda(s) más económica(s) que caen en el puesto 10. */
+  const GOAL = 10, PCT = 0.6;
+  SF.loyalty = {
+    GOAL, PCT,
+    // Sellos = prendas de los pedidos del cliente (los cancelados no cuentan)
+    stamps() {
+      return SF.orders.mine().filter(o => o.status !== 'cancelled' && o.status !== 'refunded')
+        .reduce((a, o) => a + o.items.reduce((b, i) => b + i.qty, 0), 0);
+    },
+    progress() { const s = SF.loyalty.stamps(); return { total: s, inCard: s % GOAL, left: GOAL - 1 - (s % GOAL), rewardNext: s % GOAL === GOAL - 1 }; },
+    discountFor(lines) {
+      if (!SF.auth.user() || !lines.length) return { discount: 0, units: 0 };
+      const before = SF.loyalty.stamps();
+      const units = lines.flatMap(l => Array(l.qty).fill(l.product.price)).sort((a, b) => a - b);
+      const n = Math.floor((before + units.length) / GOAL) - Math.floor(before / GOAL);
+      const discount = units.slice(0, n).reduce((a, p) => a + Math.round(p * PCT), 0);
+      return { discount, units: n, before };
+    },
+  };
+
   SF.orders = {
     // Crea el pedido en estado "pendiente de pago". La pasarela de pago
     // (Wompi / Mercado Pago / PayU / Stripe…) se conectará en este punto.
@@ -79,7 +105,8 @@
         number: 'SF-' + Date.now().toString(36).toUpperCase().slice(-6),
         userId: u ? u.id : null, customer, address, notes,
         items: lines.map(l => ({ productId: l.productId, name: l.product.name, size: l.size, qty: l.qty, unitPrice: l.product.price })),
-        subtotal: t.subtotal, shipping: t.shipping, total: t.total, currency: SF.config.currency.code,
+        subtotal: t.subtotal, discount: t.discount, shipping: t.shipping, total: t.total, currency: SF.config.currency.code,
+        loyalty: t.discount ? { stampsBefore: SF.loyalty.stamps(), discountedUnits: t.discountedUnits, pct: PCT * 100 } : null,
         status: 'pending_payment', paymentProvider: null,
       };
       // Primero la base de datos (valida precios y stock); si lo rechaza, el carrito no se toca

@@ -74,7 +74,8 @@
           method: 'POST', headers: { Prefer: 'return=minimal' },
           body: JSON.stringify({
             number: o.number, customer: o.customer, address: o.address || null, notes: o.notes || null,
-            items: o.items, subtotal: o.subtotal, shipping: o.shipping, total: o.total, currency: o.currency,
+            items: o.items, subtotal: o.subtotal, discount: o.discount || 0, loyalty: o.loyalty || null,
+            shipping: o.shipping, total: o.total, currency: o.currency,
             status: 'pending_payment',
           }),
         });

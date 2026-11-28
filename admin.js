@@ -437,6 +437,8 @@
           ${o.notes ? `<br><span class="muted">Nota: ${esc(o.notes)}</span>` : ''}
         </div>
         <ul class="small">${(o.items || []).map(i => `<li>${esc(i.qty)} × ${esc(i.name)} (talla ${esc(i.size)}) — ${money(i.unitPrice * i.qty)}</li>`).join('')}</ul>
+        ${o.discount ? `<div class="loyal-note small"><b>Tarjeta SF Club: −${money(o.discount)}</b> (${esc(o.loyalty?.discountedUnits ?? 1)} prenda${(o.loyalty?.discountedUnits ?? 1) > 1 ? 's' : ''} al ${esc(o.loyalty?.pct ?? 60)} %).
+          Verifica antes de cobrar: el cliente dice tener <b>${esc(o.loyalty?.stampsBefore ?? '?')}</b> prendas compradas con el correo ${esc(c.email || '')}.</div>` : ''}
         <div class="order__head">
           <span>Total <strong>${money(o.total)}</strong> <span class="muted small">(envío ${money(o.shipping)})</span></span>
           <select class="select" data-ostatus="${esc(o.id)}" aria-label="Estado del pedido">${Object.entries(ORDER_STATUS).map(([k, l]) => `<option value="${k}" ${o.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select>

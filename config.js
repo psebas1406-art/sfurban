@@ -41,7 +41,7 @@ SF.config = {
     telefono: '312 550 9318 / 15219633472',
     // Cada documento tiene versión: si cambia el texto, se sube la versión y se pide aceptarlo de nuevo.
     versions: {
-      terminos: 'T&C v1.0 · 2026-11-27',
+      terminos: 'T&C v1.1 · 2026-11-28',
       privacidad: 'Privacidad v2.0 · 2026-11-27',
       cookies: 'Cookies v1.0 · 2026-11-27',
       reembolsos: 'Reembolsos v1.0 · 2026-11-27',

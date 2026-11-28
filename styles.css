@@ -349,12 +349,79 @@ html.intro-on [data-header-logo] { opacity: 0; }
 
 /* Medios de pago */
 .pay-layout { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: clamp(20px, 4vw, 48px); align-items: center; }
-.paycard { position: relative; aspect-ratio: 1.586; border-radius: 20px; padding: 22px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
-  background: radial-gradient(120% 120% at 100% 0%, rgba(228,0,43,.55), transparent 55%), linear-gradient(145deg, #2B2D31, #0D0D0F 70%);
-  border: 1px solid rgba(255,255,255,.14); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 30px 60px -20px #000; transform: perspective(900px) rotateY(-10deg) rotateX(6deg); transition: transform .6s var(--ease-out); }
-.paycard:hover { transform: perspective(900px) rotateY(0) rotateX(0); }
-.paycard__shine { position: absolute; inset: -50%; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.14) 50%, transparent 60%); animation: shine 5s ease-in-out infinite; }
+/* ---------- Tarjeta de fidelidad SF Club ---------- */
+.lcard { position: relative; display: flex; flex-direction: column; justify-content: space-between; aspect-ratio: 1.586; width: 100%; padding: clamp(16px, 4%, 24px); border-radius: 20px; overflow: hidden; text-align: left; color: var(--ink);
+  background: radial-gradient(110% 120% at 100% 0%, rgba(228,0,43,.5), transparent 55%), linear-gradient(150deg, #2B2D31, #0D0D0F 72%);
+  border: 1px solid rgba(255,255,255,.14); box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 30px 60px -20px #000; }
+.lcard--page { cursor: pointer; transform: perspective(900px) rotateY(-10deg) rotateX(6deg); transition: transform .6s var(--ease-out), box-shadow .6s; }
+.lcard--page:hover, .lcard--page:focus-visible { transform: perspective(900px) rotateY(0) rotateX(0) translateY(-4px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 40px 70px -24px #000, 0 0 0 1px rgba(228,0,43,.4); }
+.lcard__shine { position: absolute; inset: -50%; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.13) 50%, transparent 60%); animation: shine 5s ease-in-out infinite; pointer-events: none; }
 @keyframes shine { 0%, 60% { transform: translateX(-40%); } 100% { transform: translateX(40%); } }
+/* Franja deportiva diagonal */
+.lcard__stripe { position: absolute; top: -20%; bottom: -20%; right: 22%; width: 18px; background: linear-gradient(var(--accent), #9e001e); transform: skewX(-18deg); opacity: .9; box-shadow: 26px 0 0 -8px rgba(245,245,242,.12); pointer-events: none; }
+.lcard__top, .lback__head { position: relative; display: flex; justify-content: space-between; align-items: center; }
+.lcard__top .brand__iso, .lback__head .brand__iso { width: clamp(44px, 14%, 60px); }
+.lcard__tag { font-family: var(--f-display); font-size: 11px; letter-spacing: .28em; color: #d8d8d3; }
+.lcard__mid { position: relative; display: grid; gap: 2px; }
+.lcard__mid small { font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-soft); }
+.lcard__mid b { font-family: var(--f-display); font-size: clamp(15px, 2vw, 19px); font-weight: 600; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.is-ghost { color: rgba(245,245,242,.4); font-style: italic; }
+.lcard__bottom { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.lcard__dots { display: flex; gap: 5px; }
+.lcard__dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid rgba(245,245,242,.35); }
+.lcard__dots i.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px rgba(228,0,43,.7); }
+.lcard__dots i.last { border-color: rgba(228,0,43,.7); }
+.lcard__count { font-family: var(--f-display); font-size: 20px; }
+.lcard__count small { font-size: 12px; color: var(--ink-soft); }
+.lcard__hint { position: absolute; left: 50%; bottom: -30px; transform: translateX(-50%); font-size: 12px; color: var(--ink-soft); letter-spacing: .08em; white-space: nowrap; }
+.lcard--page { margin-bottom: 30px; }
+
+/* Ventana de la tarjeta abierta */
+.lmodal { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 20px; }
+.lmodal__scrim { position: absolute; inset: 0; background: rgba(5,5,7,.78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); opacity: 0; transition: opacity .45s; }
+.lmodal.is-in .lmodal__scrim { opacity: 1; }
+.lmodal__body { position: relative; width: min(480px, 100%); display: grid; gap: 22px; justify-items: center; }
+.lmodal__stage { position: relative; width: 100%; perspective: 1400px; transition: transform .6s cubic-bezier(.2, .9, .25, 1.05); }
+.lmodal.is-out .lmodal__stage { transform: scale(.92) translateY(20px); opacity: 0; transition: transform .35s, opacity .3s; }
+.lflip { position: relative; width: 100%; aspect-ratio: 1.586; transform-style: preserve-3d; transition: transform .85s cubic-bezier(.65, 0, .25, 1.15); cursor: pointer; }
+.lmodal.is-flipped .lflip { transform: rotateY(180deg); }
+.lflip__face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; aspect-ratio: auto; }
+.lflip__back { transform: rotateY(180deg); justify-content: flex-start; gap: 8px; }
+/* Destello que barre la tarjeta al girar */
+.lflip__back::after { content: ''; position: absolute; inset: -40%; background: linear-gradient(110deg, transparent 42%, rgba(255,255,255,.35) 50%, transparent 58%); transform: translateX(-70%); pointer-events: none; }
+.lmodal.is-flipped .lflip__back::after { animation: sweep 1s .55s ease-out both; }
+@keyframes sweep { to { transform: translateX(70%); } }
+.lflip__back .lcard__stripe { opacity: .28; }
+.lback__name { position: relative; font-family: var(--f-display); font-size: clamp(16px, 3.6vw, 22px); font-weight: 600; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lback__stamps { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: clamp(6px, 2vw, 12px); margin-top: auto; }
+.stamp { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; border: 1.5px dashed rgba(245,245,242,.28); background: rgba(255,255,255,.03); }
+.stamp .brand__iso { width: 58%; opacity: .22; }
+.stamp.is-on { border: 1.5px solid var(--accent); background: radial-gradient(circle at 35% 30%, #ff2d55, var(--accent) 55%, #8f001b); box-shadow: 0 0 14px rgba(228,0,43,.55), inset 0 1px 0 rgba(255,255,255,.35); }
+.stamp.is-on .brand__iso { opacity: 1; }
+.stamp.is-on .brand__iso polygon[fill="#E4002B"] { fill: #fff; }
+.stamp.is-reward { border: 1.5px solid rgba(228,0,43,.8); }
+.stamp.is-reward em { font-style: normal; font-family: var(--f-display); font-size: clamp(10px, 2.4vw, 13px); color: var(--accent); }
+.stamp.is-reward.is-on em { color: #fff; }
+.lmodal.is-flipped .stamp { animation: stampIn .5s calc(.75s + var(--i) * .07s) cubic-bezier(.3, 1.6, .5, 1) both; }
+.lmodal.is-flipped .stamp.is-on { animation-name: stampOn; }
+@keyframes stampIn { from { transform: scale(.4); opacity: 0; } }
+@keyframes stampOn { 0% { transform: scale(.2); opacity: 0; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); } }
+/* Líneas de velocidad (toque deportivo) al girar */
+.lspeed { position: absolute; inset: 0; pointer-events: none; z-index: -1; }
+.lspeed i { position: absolute; left: -10%; height: 2px; width: 40%; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--accent)); opacity: 0; }
+.lspeed i:nth-child(1) { top: 12%; } .lspeed i:nth-child(2) { top: 30%; width: 55%; } .lspeed i:nth-child(3) { top: 52%; } .lspeed i:nth-child(4) { top: 72%; width: 50%; background: linear-gradient(90deg, transparent, #fff); } .lspeed i:nth-child(5) { top: 88%; }
+.lmodal.is-flipped .lspeed i { animation: speed .7s calc(var(--n, 0) * 60ms) ease-out both; }
+.lspeed i:nth-child(2) { --n: 1; } .lspeed i:nth-child(3) { --n: 2; } .lspeed i:nth-child(4) { --n: 3; } .lspeed i:nth-child(5) { --n: 4; }
+@keyframes speed { 0% { opacity: 0; transform: translateX(-30%); } 30% { opacity: .9; } 100% { opacity: 0; transform: translateX(220%); } }
+.lmodal__caption { text-align: center; opacity: 0; transform: translateY(10px); transition: opacity .5s 1.1s, transform .5s 1.1s; }
+.lmodal.is-flipped .lmodal__caption { opacity: 1; transform: none; }
+.lmodal__caption p { margin: 0 0 10px; color: var(--ink-soft); }
+.lmodal__caption p b { display: block; color: var(--ink); font-size: 17px; margin-bottom: 4px; }
+.lmodal__rule { display: block; font-size: 12px; color: var(--ink-soft); opacity: .8; max-width: 380px; margin: 0 auto; }
+.lmodal__cta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+.lmodal__close { position: absolute; top: -52px; right: 0; background: rgba(255,255,255,.08); border-radius: 50%; }
+.sum-row--loyal { color: var(--accent); font-weight: 600; }
+.sum-row--loyal .brand__iso { width: 18px; vertical-align: -3px; margin-right: 4px; }
 .paycard__top { display: flex; justify-content: space-between; align-items: center; position: relative; }
 .paycard__top .brand__iso { width: 60px; }
 .paycard__chip { width: 42px; height: 32px; border-radius: 7px; background: linear-gradient(135deg, #d9d9d4, #8C8C87); opacity: .85; }
@@ -628,7 +695,10 @@ html.intro-on:not(.intro-reveal) .cookie-banner { display: none; }
   .inside__col, .inside__col--l { text-align: left; gap: var(--s-4); }
   .cart-layout, .pay-layout, .checkout { grid-template-columns: 1fr; }
   .summary { position: static; }
-  .paycard { max-width: 380px; width: 100%; margin: 0 auto 8px; transform: none; }
+  .lcard--page { max-width: 380px; margin: 0 auto 38px; transform: none; }
+  .lflip { aspect-ratio: 1.15; }
+  .lflip__back { gap: 6px; }
+  .lback__stamps { gap: 9px; }
   .trust { grid-template-columns: 1fr; }
   .modal__card { grid-template-columns: 1fr; }
   .auth-side { min-height: 0; padding: 22px; }

@@ -130,6 +130,7 @@
           <aside class="panel summary">
             <h2>Resumen</h2>
             <div class="sum-row"><span>Subtotal</span><span>${SF.money(t.subtotal)}</span></div>
+            ${t.discount ? `<div class="sum-row sum-row--loyal"><span>${SF.isoSVG} Tarjeta SF Club · 60%</span><span>−${SF.money(t.discount)}</span></div>` : ''}
             <div class="sum-row muted"><span>Envío</span><span>${t.shipping ? SF.money(t.shipping) : 'Gratis'}</span></div>
             <div class="sum-row sum-row--total"><span>Total</span><span>${SF.money(t.total)}</span></div>
             <a class="btn btn--accent btn--block" href="checkout.html">Continuar al pago ${icon.arrow}</a>
@@ -149,12 +150,7 @@
       ];
       return `${head('Medios de pago', 'Cómo puedes pagar tus pedidos')}
         <div class="pay-layout">
-          <div class="paycard" aria-hidden="true">
-            <div class="paycard__shine"></div>
-            <div class="paycard__top">${SF.isoSVG}<span class="paycard__chip"></span></div>
-            <div class="paycard__num">•••• •••• •••• 2026</div>
-            <div class="paycard__bottom"><span>SF CLUB</span><span class="brand__word">Urban</span></div>
-          </div>
+          ${SF.loyaltyCard.html()}
           <div class="methods">
             ${methods.map(m => `<div class="method"><span class="method__ic">${icon[m.ic]}</span><div><b>${m.t}</b><small>${m.d}</small></div><span class="status">Próximamente</span></div>`).join('')}
           </div>
