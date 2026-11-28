@@ -11,7 +11,7 @@ SF.config = {
     handle: 'sfurban',
     tagline: 'Women & Men — Activewear',
     motto: 'Dos letras, un solo movimiento.',
-    email: 'psebas.1406@gmail.com',     // correo de contacto (aparece en la web y en la política de privacidad)
+    email: 'sfurban.1814@gmail.com',     // correo de contacto (aparece en la web y en la política de privacidad)
     whatsapp: '',                        // número para "Hablar por WhatsApp" (con indicativo, sin +), ej. 573001234567. Vacío = se oculta el botón
     instagram: 'https://instagram.com/', // TODO
     tiktok: 'https://tiktok.com/',       // TODO
