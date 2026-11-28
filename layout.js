@@ -105,6 +105,7 @@
         <a href="${L.docs.cookies}">Política de cookies</a>
         <a href="${L.docs.reembolsos}">Cambios, devoluciones y reembolsos</a>
         <button type="button" data-cookie-settings>Preferencias de cookies</button>
+        ${SF.whatsappUrl() ? `<a href="${SF.whatsappUrl()}" target="_blank" rel="noopener" data-wa>WhatsApp</a>` : ''}
       </nav>
       <details class="footer-id">
         <summary>Datos del vendedor</summary>
@@ -253,7 +254,9 @@
             <label>Contraseña<input name="password" type="password" autocomplete="new-password" minlength="8" required><small class="muted">Mínimo 8 caracteres.</small></label>
             ${legalChecks()}
             ${SF.consent.checkbox('marketing', { required: false })}
-            <p class="legal-note">Solo te pedimos lo necesario para tu cuenta. Celular y dirección se piden al comprar. <a href="${SF.config.legal.docs.privacidad}" target="_blank" rel="noopener">¿Cómo usamos tus datos?</a></p>
+            ${SF.consent.checkbox('whatsapp', { required: false })}
+            <label class="wa-phone" data-wa-phone hidden>Tu número de WhatsApp<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej. 300 123 4567"><small class="muted">Solo lo usamos para estos avisos. Puedes retirarlos cuando quieras.</small></label>
+            <p class="legal-note">Solo te pedimos lo necesario para tu cuenta. Tu celular solo se pide si quieres avisos por WhatsApp; la dirección, al comprar. <a href="${SF.config.legal.docs.privacidad}" target="_blank" rel="noopener">¿Cómo usamos tus datos?</a></p>
             <p class="form-error" data-error></p>
             <button class="btn btn--accent btn--block" type="submit">Crear cuenta</button>
           </form>
@@ -274,11 +277,24 @@
       </div>
     </div>
 
+    ${waButton()}
     <div class="toasts" aria-live="polite" data-toasts></div>
     ${cookieBanner()}
 
     ${SF.chat ? SF.chat.markup() : ''}`;
   }
+
+  /* ---------- Botón flotante de WhatsApp ---------- */
+  const WA_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91A9.85 9.85 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.23 8.23 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24Zm4.52-6.17c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48a.92.92 0 0 0-.66.31c-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.17-.47-.29Z"/></svg>';
+  SF.whatsappUrl = (text = 'Hola SF Urban 👋 Quiero información sobre una prenda.') => {
+    const n = (SF.config.brand.whatsapp || '').replace(/\D/g, '');
+    return n ? `https://wa.me/${n}?text=${encodeURIComponent(text)}` : '';
+  };
+  function waButton() {
+    const url = SF.whatsappUrl(); if (!url) return '';
+    return `<a class="wa-fab" href="${url}" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp" data-wa>${WA_SVG}<span>WhatsApp</span></a>`;
+  }
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-wa]')) SF.track?.('whatsapp_click'); });
 
   /* ---------- Toasts (con acción opcional) ---------- */
   SF.toast = (msg, type = 'ok', action) => {
@@ -346,6 +362,7 @@
         const u = await SF.auth.register({
           name: data.name, email: data.email, password: data.password,
           terms: f.c_terminos.checked, privacy: f.c_privacidad.checked, adult: f.c_mayoria_edad.checked, marketing: f.c_marketing.checked,
+          whatsapp: f.c_whatsapp.checked, phone: data.phone,
         });
         SF.closeAll();
         if (u.pending) SF.toast(`¡Listo, ${u.name.split(' ')[0]}! Te enviamos un correo a ${u.email}: ábrelo para activar tu cuenta.`, 'info');
@@ -404,6 +421,12 @@
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); SF.goView('explorar'); }
     });
     $$('[data-auth-form]').forEach(f => f.addEventListener('submit', onAuthSubmit));
+    // El celular solo aparece (y se pide) si la persona quiere avisos por WhatsApp
+    document.addEventListener('change', (e) => {
+      if (!e.target.matches('[data-auth-form="register"] [name="c_whatsapp"]')) return;
+      const box = $('[data-wa-phone]'); box.hidden = !e.target.checked;
+      if (e.target.checked) box.querySelector('input').focus();
+    });
     if (SF.chat) SF.chat.bind();
 
     // Cookies: el aviso aparece hasta que la persona decide; nada opcional se activa antes.

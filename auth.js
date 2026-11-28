@@ -68,7 +68,7 @@
   }
 
   /* ---------------- Perfil y pedidos (caché local) ---------------- */
-  const fromProfile = (c) => c && ({ id: c.id, email: c.email, name: c.name, phone: c.phone || '', address: c.address || null, marketing: !!c.marketing, createdAt: c.created_at });
+  const fromProfile = (c) => c && ({ id: c.id, email: c.email, name: c.name, phone: c.phone || '', address: c.address || null, marketing: !!c.marketing, whatsapp: !!c.whatsapp_optin, avatar: c.avatar_url || null, createdAt: c.created_at });
   const fromOrder = (o) => ({
     id: o.id, number: o.number, userId: o.user_id, customer: o.customer, address: o.address, notes: o.notes,
     items: o.items || [], subtotal: o.subtotal, discount: o.discount || 0, shipping: o.shipping, total: o.total,
@@ -77,7 +77,8 @@
   async function loadProfile() {
     const s = getSession(); if (!s) return null;
     const rows = await api(`customers?id=eq.${s.user.id}&select=*`);
-    const p = fromProfile(rows?.[0]) || { id: s.user.id, email: s.user.email, name: '', marketing: false };
+    // Si el perfil aún no llega, se conserva lo que ya había en este dispositivo
+    const p = fromProfile(rows?.[0]) || SF.db.kv.get(K.profile) || { id: s.user.id, email: s.user.email, name: '', marketing: false };
     SF.db.kv.set(K.profile, p); return p;
   }
   async function loadOrders() {
@@ -118,8 +119,10 @@
     },
 
     // Datos mínimos: solo nombre, correo y contraseña.
-    async register({ name, email, password, terms, privacy, adult, marketing = false }) {
+    async register({ name, email, password, terms, privacy, adult, marketing = false, whatsapp = false, phone = '' }) {
       name = (name || '').trim(); email = (email || '').trim().toLowerCase();
+      phone = SF.auth.cleanPhone(phone);
+      if (whatsapp && !phone) throw new Error('Escribe tu número de WhatsApp para recibir los avisos (o desmarca esa casilla).');
       if (name.length < 2) throw new Error('Escribe tu nombre.');
       if (!emailOk(email)) throw new Error('Ese correo no parece válido.');
       if ((password || '').length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
@@ -128,7 +131,7 @@
       if (!adult) throw new Error('Debes ser mayor de 18 años para crear una cuenta.');
       const r = await fetch(`${cfg.url}/auth/v1/signup?redirect_to=${encodeURIComponent(site())}`, {
         method: 'POST', headers: authHeaders,
-        body: JSON.stringify({ email, password, data: { name: name.slice(0, 80), marketing: !!marketing } }),
+        body: JSON.stringify({ email, password, data: { name: name.slice(0, 80), marketing: !!marketing, whatsapp: !!whatsapp, phone: whatsapp ? phone : '' } }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(niceError(j, 'No se pudo crear la cuenta.'));
@@ -143,10 +146,13 @@
           { purpose: 'mayoria_edad', granted: true }, { purpose: 'marketing', granted: !!marketing },
         ],
       });
+      // WhatsApp va en un registro aparte (decisión independiente del cliente)
+      await SF.consent.record({ form: 'registro', email, userId, items: [{ purpose: 'whatsapp', granted: !!whatsapp }] });
       SF.track('sign_up', { method: 'email' });
       if (!j.access_token) return { name, email, pending: true }; // debe confirmar el correo
       saveSession(j);
-      SF.db.kv.set(K.profile, { id: userId, email, name, marketing: !!marketing, phone: '', address: null, createdAt: new Date().toISOString() });
+      SF.db.kv.set(K.profile, { id: userId, email, name, marketing: !!marketing, whatsapp: !!whatsapp, phone: whatsapp ? phone : '', avatar: null, address: null, createdAt: new Date().toISOString() });
+      api('rpc/registrar_inicio_sesion', { method: 'POST', body: {} }).catch(() => {});
       await afterLogin();
       return SF.auth.user();
     },
@@ -190,6 +196,65 @@
       emit();
     },
 
+    /** Deja solo dígitos; a un celular colombiano de 10 dígitos le agrega el 57. */
+    cleanPhone(p) {
+      let d = String(p || '').replace(/\D/g, '');
+      if (d.length === 10 && d.startsWith('3')) d = '57' + d;
+      return d.length >= 10 && d.length <= 15 ? d : '';
+    },
+
+    /** Autorizar o retirar los avisos por WhatsApp (queda registrado). */
+    async setWhatsapp(on, phone) {
+      const u = SF.auth.user(); if (!u) return;
+      const patch = { whatsapp_optin: !!on };
+      if (on) {
+        const p = SF.auth.cleanPhone(phone || u.phone);
+        if (!p) throw new Error('Primero escribe tu número de WhatsApp.');
+        patch.phone = p;
+      }
+      await api(`customers?id=eq.${u.id}`, { method: 'PATCH', body: patch });
+      SF.db.kv.set(K.profile, { ...u, whatsapp: !!on, phone: patch.phone || u.phone });
+      await SF.consent.record({ form: 'perfil', method: 'interruptor en el perfil', email: u.email, userId: u.id, items: [{ purpose: 'whatsapp', granted: !!on }] });
+      emit();
+    },
+
+    /** Foto de perfil: se reduce a 320 px (WebP) y se guarda en la carpeta de la persona. */
+    async uploadAvatar(file) {
+      const u = SF.auth.user(); if (!u) return;
+      if (!/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) throw new Error('Elige una imagen (JPG, PNG o WebP).');
+      let blob = file;
+      try {
+        const bmp = await createImageBitmap(file);
+        const side = Math.min(bmp.width, bmp.height), S = Math.min(320, side);
+        const c = document.createElement('canvas'); c.width = c.height = S;
+        // Recorte cuadrado centrado
+        c.getContext('2d').drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, S, S);
+        blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.85)) || file;
+      } catch {}
+      if (blob.size > 2 * 1024 * 1024) throw new Error('La foto es muy pesada. Prueba con otra.');
+      const t = await token(); if (!t) throw new Error('Tu sesión expiró. Inicia sesión de nuevo.');
+      const path = `${u.id}/foto-${Date.now().toString(36)}.webp`;
+      const r = await fetch(`${cfg.url}/storage/v1/object/avatars/${path}`, { method: 'POST', headers: { apikey: cfg.anonKey, Authorization: `Bearer ${t}`, 'Content-Type': blob.type || 'image/webp' }, body: blob });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error('No se pudo subir la foto: ' + (j.message || r.status)); }
+      const url = `${cfg.url}/storage/v1/object/public/avatars/${path}`;
+      const old = u.avatar;
+      await api(`customers?id=eq.${u.id}`, { method: 'PATCH', body: { avatar_url: url } });
+      SF.db.kv.set(K.profile, { ...u, avatar: url }); emit();
+      if (old) SF.auth.deleteAvatarFile(old);
+      return url;
+    },
+    async removeAvatar() {
+      const u = SF.auth.user(); if (!u || !u.avatar) return;
+      await api(`customers?id=eq.${u.id}`, { method: 'PATCH', body: { avatar_url: null } });
+      SF.auth.deleteAvatarFile(u.avatar);
+      SF.db.kv.set(K.profile, { ...u, avatar: null }); emit();
+    },
+    async deleteAvatarFile(url) {
+      const m = String(url).match(/\/avatars\/(.+)$/); if (!m) return;
+      const t = await token(); if (!t) return;
+      fetch(`${cfg.url}/storage/v1/object/avatars/${m[1]}`, { method: 'DELETE', headers: { apikey: cfg.anonKey, Authorization: `Bearer ${t}` } }).catch(() => {});
+    },
+
     /** Copia de todos los datos que la tienda tiene de esta persona (derecho de acceso). */
     exportData() {
       const u = SF.auth.user(); if (!u) return null;
@@ -201,6 +266,7 @@
     async deleteAccount() {
       const u = SF.auth.user(); if (!u) return;
       await SF.consent.record({ form: 'perfil', method: 'botón eliminar cuenta', email: u.email, userId: u.id, items: [{ purpose: 'privacidad', granted: false }, { purpose: 'marketing', granted: false }] });
+      if (u.avatar) await SF.auth.deleteAvatarFile(u.avatar);
       await api('rpc/eliminar_mi_cuenta', { method: 'POST', body: {} });
       SF.db.kv.del('cart:' + u.id); SF.db.kv.del('wish:' + u.id);
       clearLocal(); emit();

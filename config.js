@@ -12,7 +12,7 @@ SF.config = {
     tagline: 'Women & Men — Activewear',
     motto: 'Dos letras, un solo movimiento.',
     email: 'sfurban.1814@gmail.com',     // correo de contacto (aparece en la web y en la política de privacidad)
-    whatsapp: '',                        // número para "Hablar por WhatsApp" (con indicativo, sin +), ej. 573001234567. Vacío = se oculta el botón
+    whatsapp: '573125509318',                      // número para "Hablar por WhatsApp" (con indicativo, sin +), ej. 573001234567. Vacío = se oculta el botón
     instagram: 'https://instagram.com/', // TODO
     tiktok: 'https://tiktok.com/',       // TODO
   },
@@ -42,7 +42,7 @@ SF.config = {
     // Cada documento tiene versión: si cambia el texto, se sube la versión y se pide aceptarlo de nuevo.
     versions: {
       terminos: 'T&C v1.1 · 2026-11-28',
-      privacidad: 'Privacidad v2.1 · 2026-11-28',
+      privacidad: 'Privacidad v2.2 · 2026-11-28',
       cookies: 'Cookies v1.0 · 2026-11-27',
       reembolsos: 'Reembolsos v1.0 · 2026-11-27',
     },

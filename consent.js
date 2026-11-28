@@ -25,8 +25,9 @@
     marketing: 'Quiero recibir novedades, lanzamientos y descuentos por correo (opcional).',
     mayoria_edad: 'Confirmo que soy mayor de 18 años.',
     cookies_analitica: 'Acepto cookies y almacenamiento de analítica para mejorar la tienda.',
+    whatsapp: 'Quiero recibir avisos y descuentos por WhatsApp (Black Friday, lanzamientos, promociones) (opcional).',
   };
-  const DOC_FOR = { terminos: 'terminos', privacidad: 'privacidad', marketing: 'privacidad', mayoria_edad: 'terminos', cookies_analitica: 'cookies' };
+  const DOC_FOR = { terminos: 'terminos', privacidad: 'privacidad', marketing: 'privacidad', whatsapp: 'privacidad', mayoria_edad: 'terminos', cookies_analitica: 'cookies' };
 
   async function push(payload) {
     if (!SF.config.agentUrl) return false;

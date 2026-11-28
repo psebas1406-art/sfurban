@@ -251,6 +251,7 @@
     password_reset_requested: ['?', 'Pidió recuperar la contraseña'],
     password_changed: ['🔑', 'Cambió su contraseña'],
     account_deleted: ['✕', 'Eliminó su cuenta'],
+    deleted_by_admin: ['✕', 'Datos eliminados por la tienda'],
   };
   function accountList(rows, { withWho = true } = {}) {
     if (!rows.length) return '<p class="muted small" style="margin:0">Aún no hay movimientos.</p>';
@@ -446,7 +447,9 @@
     const q = st.q.toLowerCase();
     const cust = realCustomers();
     // En la lista salen TODAS las cuentas (también las de ustedes, marcadas como Admin)
-    const list = st.customers.filter(c => !q || [c.name, c.email, c.phone].join(' ').toLowerCase().includes(q));
+    const list = st.customers.filter(c => (!q || [c.name, c.email, c.phone].join(' ').toLowerCase().includes(q))
+      && (!st.onlyInactive || (!isAdminEmail(c.email) && daysInactive(c) >= INACTIVE_DAYS)));
+    const inactiveCount = cust.filter(c => daysInactive(c) >= INACTIVE_DAYS).length;
     const d30 = Date.now() - 30 * 864e5;
     return `
     <div class="kpis">
@@ -459,11 +462,12 @@
       <div class="card__head"><h2>Movimientos de cuentas</h2><span class="muted small">Registros, inicios de sesión y cambios de contraseña</span></div>
       ${accountList(st.accounts.slice(0, 40))}
     </section>
-    <div class="bar"><input class="input" type="search" placeholder="Buscar por nombre, correo o celular…" value="${esc(st.q)}" data-q></div>
+    <div class="bar"><input class="input" type="search" placeholder="Buscar por nombre, correo o celular…" value="${esc(st.q)}" data-q>
+      <button class="chipbtn ${st.onlyInactive ? 'is-on' : ''}" data-inactive>Inactivos (+${INACTIVE_DAYS} días) <span>${inactiveCount}</span></button></div>
     ${list.length ? `<div class="clist">${list.map(c => {
       const s = customerStats(c);
       return `<button class="crow" data-customer="${esc(c.id)}">
-        <span class="crow__avatar">${esc(displayName(c).charAt(0).toUpperCase())}</span>
+        <span class="crow__avatar">${c.avatar_url ? `<img src="${esc(c.avatar_url)}" alt="">` : esc(displayName(c).charAt(0).toUpperCase())}</span>
         <span class="crow__main"><b>${esc(displayName(c))}${isAdminEmail(c.email) ? '<span class="tag-admin">Admin</span>' : ''}</b><span class="muted small">${esc(c.email)} · ${c.last_login_at ? 'último inicio ' + date(c.last_login_at) : 'creada ' + date(c.created_at)}</span></span>
         <span class="crow__stat"><b>${s.paid.length}</b><span class="muted small">compras</span></span>
         <span class="crow__stat"><b>${money(s.spent)}</b><span class="muted small">total</span></span>
@@ -480,14 +484,61 @@
     return `${EVENT_LABEL[e.type] || e.type}${extra ? ` <span class="muted">${esc(extra)}</span>` : ''}`;
   }
 
+  /* ---------- Clientes inactivos y eliminación de datos ---------- */
+  const INACTIVE_DAYS = 90;
+  const daysInactive = (c) => Math.floor((Date.now() - new Date(c.last_login_at || c.created_at).getTime()) / 864e5);
+
+  // Número para wa.me: solo dígitos y con indicativo de Colombia si falta
+  const waNumber = (p) => { let d = String(p || '').replace(/\D/g, ''); if (d.length === 10 && d.startsWith('3')) d = '57' + d; return d.length >= 10 ? d : ''; };
+  const deletionMessage = (name) => `Hola${name ? ' ' + name.split(' ')[0] : ''} 👋 Te escribimos de SF Urban. Debido a la falta de actividad en tu cuenta, tus datos fueron eliminados de nuestra tienda sfurban. Si quieres volver, puedes crear una cuenta nueva cuando quieras en ${location.origin + location.pathname.replace(/[^/]*$/, '')} ¡Gracias por ser parte de SF Urban!`;
+
+  async function deleteCustomer(c, closeSheet) {
+    const name = displayName(c);
+    if (!(await ask(`¿Eliminar todos los datos de ${name}?\n\nSe borra su cuenta, perfil, foto y actividad. No se puede deshacer.`, 'Eliminar datos', true))) return;
+    try {
+      // La foto se borra primero (el archivo vive aparte de la base de datos)
+      if (c.avatar_url) {
+        const m = c.avatar_url.match(/\/avatars\/(.+)$/);
+        if (m) await fetch(`${cfg.url}/storage/v1/object/avatars/${m[1]}`, { method: 'DELETE', headers: { apikey: cfg.anonKey, Authorization: `Bearer ${await token()}` } }).catch(() => {});
+      }
+      const r = await api('rpc/admin_eliminar_cliente', { method: 'POST', body: { cliente: c.id } });
+      st.customers = st.customers.filter(x => x.id !== c.id);
+      st.accounts.unshift({ user_id: c.id, email: c.email, name: c.name, action: 'deleted_by_admin', created_at: new Date().toISOString() });
+      closeSheet(); render();
+      notifyDeletion({ name: r?.name || c.name, phone: r?.phone || c.phone, email: r?.email || c.email });
+    } catch (ex) { toast(ex.message, true); }
+  }
+
+  /* Aviso por WhatsApp. Hoy no se puede enviar 100 % automático porque la API oficial
+     de WhatsApp de Meta está en pausa (requiere RUT). Por eso se abre WhatsApp con el
+     mensaje YA ESCRITO al número del cliente: solo hay que tocar "Enviar". */
+  function notifyDeletion({ name, phone, email }) {
+    const n = waNumber(phone), msg = deletionMessage(name);
+    const m = document.createElement('div'); m.className = 'ask';
+    m.innerHTML = `<div class="ask__box" role="alertdialog" aria-modal="true">
+      <p><b>Datos eliminados ✓</b><br>${n ? `Avísale a ${esc(name || 'la persona')} por WhatsApp. El mensaje ya va escrito:` : `${esc(name || 'Esta persona')} no registró número de celular. Puedes avisarle por correo:`}</p>
+      <p class="ask__msg">${esc(msg)}</p>
+      <div class="ask__btns">
+        <button class="btn btn--ghost" data-no>Cerrar</button>
+        ${n ? `<a class="btn btn--wa" href="https://wa.me/${n}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" data-yes>Enviar por WhatsApp</a>`
+            : email ? `<a class="btn btn--accent" href="mailto:${esc(email)}?subject=${encodeURIComponent('Tus datos en SF Urban')}&body=${encodeURIComponent(msg)}" data-yes>Enviar por correo</a>` : ''}
+      </div></div>`;
+    document.body.appendChild(m);
+    m.addEventListener('click', (e) => { if (e.target.closest('[data-no],[data-yes]') || e.target === m) setTimeout(() => m.remove(), 50); });
+  }
+
   async function openCustomer(id) {
     const c = st.customers.find(x => x.id === id); if (!c) return;
     const s = customerStats(c);
     const el = document.createElement('div'); el.className = 'sheet';
     document.body.appendChild(el); document.body.style.overflow = 'hidden';
     const close = () => { el.remove(); document.body.style.overflow = ''; };
-    el.addEventListener('click', (e) => { if (e.target === el || e.target.closest('[data-close]')) close(); });
+    el.addEventListener('click', (e) => {
+      if (e.target === el || e.target.closest('[data-close]')) close();
+      if (e.target.closest('[data-del-customer]')) deleteCustomer(c, close);
+    });
     const cons = st.consents.filter(x => x.email && x.email === c.email);
+    const inactiveDays = daysInactive(c);
     const stamps = Array.from({ length: 10 }, (_, i) => `<span class="stamp ${i < s.inCard ? 'is-on' : ''} ${i === 9 ? 'is-reward' : ''}">${i === 9 ? '60%' : `<img src="${LOGO}" alt="">`}</span>`).join('');
     const addr = c.address ? [c.address.line1, c.address.line2, c.address.city, c.address.region].filter(Boolean).join(', ') : '';
     el.innerHTML = `
@@ -496,9 +547,12 @@
       <div class="sheet__body">
         <section class="group">
           <h3>Datos</h3>
+          ${c.avatar_url ? `<img class="cust-photo" src="${esc(c.avatar_url)}" alt="Foto de perfil">` : ''}
           <dl class="dl">
             <dt>Correo</dt><dd>${esc(c.email)}</dd>
             <dt>Celular</dt><dd>${esc(c.phone || '—')}</dd>
+            <dt>Avisos por WhatsApp</dt><dd>${c.whatsapp_optin ? '<span class="yes">Autorizados</span>' : '<span class="muted">No autorizados</span>'}</dd>
+            <dt>Sin actividad</dt><dd>${inactiveDays} día${inactiveDays === 1 ? '' : 's'}${inactiveDays >= INACTIVE_DAYS ? ' <span class="chip chip--o-cancelled">Inactivo</span>' : ''}</dd>
             <dt>Dirección</dt><dd>${esc(addr || '—')}</dd>
             <dt>Cuenta creada</dt><dd>${date(c.created_at)}</dd>
             <dt>Último inicio de sesión</dt><dd>${c.last_login_at ? date(c.last_login_at) : '—'}</dd>
@@ -533,6 +587,11 @@
           <h3>Autorizaciones (${cons.length})</h3>
           ${cons.length ? `<ul class="list">${cons.slice(0, 20).map(x => `<li><span>${esc(PURPOSE[x.purpose] || x.purpose)} <span class="muted small">${esc(x.form || '')} · ${esc(x.doc_version)}</span></span><span class="${x.granted ? 'yes' : 'no'}">${x.granted ? 'Aceptó' : 'Retiró'} · <span class="muted small">${date(x.server_ts)}</span></span></li>`).join('')}</ul>` : '<p class="muted small" style="margin:0">Sin registros (puede que el servidor aún no tenga la clave permanente).</p>'}
         </section>
+        ${isAdminEmail(c.email) ? '' : `<section class="group group--danger">
+          <h3>Eliminar datos del cliente</h3>
+          <p class="muted small" style="margin:0">Borra su cuenta, perfil, foto y actividad de la tienda. Sus pedidos se conservan sin su nombre (obligación contable) y sus autorizaciones se conservan como prueba legal. Después podrás avisarle por WhatsApp.</p>
+          <button class="btn btn--danger" data-del-customer>Eliminar datos de ${esc(displayName(c))}</button>
+        </section>`}
       </div>
     </div>`;
     try {
@@ -552,6 +611,7 @@
     else if (t.dataset.customer) openCustomer(t.dataset.customer);
     else if (t.dataset.ofilter) { st.orderFilter = t.dataset.ofilter; render(); }
   });
+  app.addEventListener('click', (e) => { if (e.target.closest('[data-inactive]')) { st.onlyInactive = !st.onlyInactive; render(); } });
 
   /* ---------------- Inventario ---------------- */
   const stockTotal = (p) => Object.values(p.stock || {}).reduce((a, n) => a + (+n || 0), 0);
@@ -878,7 +938,7 @@
   });
 
   /* ---------------- Consentimientos (prueba para la SIC) ---------------- */
-  const PURPOSE = { terminos: 'Términos', privacidad: 'Privacidad', mayoria_edad: 'Mayor de 18', marketing: 'Publicidad', cookies_analitica: 'Cookies analítica' };
+  const PURPOSE = { terminos: 'Términos', privacidad: 'Privacidad', mayoria_edad: 'Mayor de 18', marketing: 'Publicidad por correo', whatsapp: 'Avisos por WhatsApp', cookies_analitica: 'Cookies analítica' };
   function consents() {
     const q = st.q.toLowerCase();
     const list = st.consents.filter(c => !q || [c.email, c.anon_id, c.form, c.purpose].join(' ').toLowerCase().includes(q));

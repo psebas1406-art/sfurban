@@ -196,6 +196,14 @@ th { background: var(--bg-2); color: var(--ink-soft); font-weight: 600; position
 .btn--danger-solid { background: var(--accent); border-color: var(--accent); color: #fff; }
 @keyframes askIn { from { transform: scale(.96); opacity: 0; } }
 
+.ask__msg { padding: 12px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); font-size: 13.5px !important; color: var(--ink-soft); }
+.btn--wa { background: #25D366; border-color: #25D366; color: #0b3d1f; }
+.btn--wa:hover { background: #1ebe5a; border-color: #1ebe5a; }
+.group--danger { border-color: rgba(228,0,43,.4); }
+.cust-photo { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 2px solid var(--line); }
+.crow__avatar { overflow: hidden; }
+.crow__avatar img { width: 100%; height: 100%; object-fit: cover; }
+
 /* Movimientos de cuentas */
 .acts { list-style: none; margin: 0; padding: 0; display: grid; }
 .acts li { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }

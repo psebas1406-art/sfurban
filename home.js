@@ -182,14 +182,14 @@
         </div>`;
       const tab = ex.ptab || 'pedidos';
       const orders = SF.orders.mine(), a = u.address || {};
-      const initials = u.name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
+      const initials = ((u.name || u.email || '?').trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('') || '?').toUpperCase();
       const statusTxt = { pending_payment: 'Pendiente de pago', paid: 'Pagado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado' };
       const panes = {
         pedidos: orders.length ? `<div class="panel">${orders.map(o => `<div class="order"><div><strong>${esc(o.number)}</strong> <span class="muted">· ${new Date(o.createdAt).toLocaleDateString('es')}</span><br><span class="muted">${o.items.map(i => `${esc(i.name)} (${esc(i.size)}) x${i.qty}`).join(', ')}</span></div><div style="text-align:right"><strong>${SF.money(o.total)}</strong><br><span class="status">${statusTxt[o.status] || o.status}</span></div></div>`).join('')}</div>`
           : empty('box', 'Sin pedidos todavía', 'Cuando compres, verás aquí el estado de cada pedido.', `<button class="btn btn--ghost" data-go="explorar">Explorar</button>`),
         datos: `<div class="panel"><form class="form" data-profile>
             <label>Nombre<input name="name" value="${esc(u.name)}" required></label>
-            <div class="form-row"><label>Correo<input value="${esc(u.email)}" disabled></label><label>Celular <span class="muted">(opcional, para coordinar entregas)</span><input name="phone" type="tel" value="${esc(u.phone || '')}"></label></div>
+            <div class="form-row"><label>Correo<input value="${esc(u.email)}" disabled></label><label>Celular / WhatsApp <span class="muted">(opcional: entregas y avisos si los autorizas)</span><input name="phone" type="tel" inputmode="tel" value="${esc(u.phone || '')}"></label></div>
             <button class="btn btn--accent" style="justify-self:start">Guardar cambios</button></form></div>`,
         privacidad: (() => {
           const hist = SF.consent.history(u.email);
@@ -199,6 +199,7 @@
           <div class="panel privacy-pane">
             <h2>Tus autorizaciones</h2>
             <label class="set-row"><span><b>Publicidad por correo</b><small>Novedades, lanzamientos y descuentos. Puedes retirarla cuando quieras.</small></span><input type="checkbox" class="switch" data-marketing ${u.marketing ? 'checked' : ''}></label>
+            <label class="set-row"><span><b>Avisos por WhatsApp</b><small>Descuentos de Black Friday, lanzamientos y promociones${u.phone ? ` al ${esc(u.phone)}` : ''}. Tú decides: sí o no, y puedes cambiarlo cuando quieras.</small></span><input type="checkbox" class="switch" data-whatsapp ${u.whatsapp ? 'checked' : ''}></label>
             <label class="set-row"><span><b>Cookies de analítica</b><small>Nos ayuda a saber qué prendas interesan más.</small></span><input type="checkbox" class="switch" data-analytics ${SF.consent.cookies.analytics() ? 'checked' : ''}></label>
             <h2 class="mt-2">Registro de consentimientos</h2>
             <p class="legal-note">Cada vez que aceptas o retiras una autorización queda registrada con fecha, hora y versión del documento.</p>
@@ -222,7 +223,13 @@
       };
       return `
         <div class="me">
-          <div class="me__av">${esc(initials)}</div>
+          <label class="me__av ${u.avatar ? 'has-photo' : ''}" title="Cambiar foto de perfil">
+            ${u.avatar ? `<img src="${esc(u.avatar)}" alt="Tu foto de perfil">` : esc(initials)}
+            <span class="me__av-edit" aria-hidden="true">${icon.camera || '✎'}</span>
+            <input type="file" accept="image/*" data-avatar hidden>
+            <span class="sr-only">Cambiar foto de perfil</span>
+          </label>
+          ${u.avatar ? '<button class="link-btn me__av-rm" data-avatar-rm>Quitar foto</button>' : ''}
           <div class="me__txt"><h1 class="display h-s">${esc(u.name)}</h1><p class="muted">${esc(u.email)} · Miembro desde ${new Date(u.createdAt).toLocaleDateString('es', { month: 'long', year: 'numeric' })}</p></div>
           <button class="btn btn--ghost btn--sm" data-logout>${icon.logout} Salir</button>
         </div>
@@ -332,6 +339,21 @@
     if (e.target.matches('[data-ex-sort]')) { ex.sort = e.target.value; renderResults(); }
     if (e.target.matches('[data-ex-soon]')) { ex.soon = e.target.checked; renderResults(); }
     if (e.target.matches('[data-marketing]')) SF.auth.setMarketing(e.target.checked).then(() => SF.toast(e.target.checked ? 'Autorizaste recibir novedades' : 'Ya no te enviaremos publicidad', 'info'));
+    if (e.target.matches('[data-whatsapp]')) {
+      const on = e.target.checked, u = SF.auth.user();
+      if (on && !SF.auth.cleanPhone(u.phone)) {
+        e.target.checked = false; ex.ptab = 'datos'; render(true);
+        SF.toast('Primero escribe tu número de WhatsApp en "Celular" y guarda; luego activa los avisos.', 'info');
+        setTimeout(() => $('[data-profile] [name="phone"]')?.focus(), 100);
+        return;
+      }
+      SF.auth.setWhatsapp(on, u.phone).then(() => SF.toast(on ? 'Listo: te avisaremos por WhatsApp' : 'Ya no te enviaremos avisos por WhatsApp', 'info'))
+        .catch(ex => { e.target.checked = !on; SF.toast(ex.message, 'err'); });
+    }
+    if (e.target.matches('[data-avatar]') && e.target.files[0]) {
+      SF.toast('Subiendo tu foto…', 'info');
+      SF.auth.uploadAvatar(e.target.files[0]).then(() => SF.toast('Foto de perfil actualizada ✓')).catch(ex => SF.toast(ex.message, 'err'));
+    }
     if (e.target.matches('[data-analytics]')) SF.consent.cookies.set(e.target.checked, 'interruptor en el perfil').then(() => { SF.toast('Preferencia de cookies actualizada', 'info'); render(true); });
   });
   view.addEventListener('submit', (e) => {
@@ -343,6 +365,10 @@
   // Mantener las vistas al día cuando cambian carrito, favoritos o sesión
   SF.cart.onChange(() => { if (['carrito', 'favoritos', 'perfil'].includes(shown)) render(true); else $$('[data-wish]', view).forEach(b => b.classList.toggle('is-on', SF.wish.has(b.dataset.wish))); });
   SF.auth.onChange(() => { if (['perfil', 'pagos', 'inicio'].includes(shown)) render(true); });
+  view.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-avatar-rm]')) return;
+    SF.auth.removeAvatar().then(() => SF.toast('Foto quitada')).catch(ex => SF.toast(ex.message, 'err'));
+  });
   // El inventario cambió en la base de datos (desde el panel privado) → se vuelve a pintar
   addEventListener('sf:catalog', () => {
     const q = $('[data-ex-q]'), had = q && document.activeElement === q;
